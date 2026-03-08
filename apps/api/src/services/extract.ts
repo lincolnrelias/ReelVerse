@@ -16,7 +16,7 @@ export async function extractVideo(
   const metaJson = await execCommand('yt-dlp', [
     '--dump-json',
     '--no-warnings',
-    '--extractor-args', 'youtube:player_client=ios',
+    '--extractor-args', 'youtube:player_client=android',
     videoUrl
   ], {
     timeout: 30000,
@@ -47,7 +47,7 @@ export async function extractVideo(
       '--merge-output-format',
       'mp4',
       '--extractor-args',
-      'youtube:player_client=ios',
+      'youtube:player_client=android',
       '-o',
       videoPath,
       videoUrl,
