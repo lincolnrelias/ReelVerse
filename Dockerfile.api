@@ -1,0 +1,51 @@
+FROM node:20-alpine AS base
+
+# Install necessary tools including ffmpeg for yt-dlp
+RUN apk update && \
+    apk add --no-cache libc6-compat python3 ffmpeg
+
+RUN corepack enable && corepack prepare npm@10.2.0 --activate
+
+FROM base AS builder
+# Set working directory
+WORKDIR /app
+
+# Copy root configurations (Turbo)
+COPY turbo.json .
+COPY package.json .
+COPY package-lock.json .
+
+# Copy packages and apps
+COPY packages ./packages
+COPY apps/api ./apps/api
+
+# Install dependencies (respecting workspaces)
+RUN npm install
+
+# Build the api package via turbo
+RUN npx turbo run build --filter=api
+
+FROM base AS runner
+WORKDIR /app
+
+# Copy minimal files needed for runtime
+COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages ./packages
+COPY --from=builder /app/apps/api/package.json ./apps/api/
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+# We need to install yt-dlp globally since our worker execs it
+RUN apk add --no-cache curl && \
+    curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && \
+    chmod a+rx /usr/local/bin/yt-dlp
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Expose API port
+EXPOSE 3000
+
+# The CMD varies if we run as API or WORKER, we rely on Railway to override this 
+# via start command or we just default to API
+CMD ["node", "apps/api/dist/index.js"]
