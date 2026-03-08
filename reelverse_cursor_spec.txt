@@ -1,0 +1,832 @@
+# REELVERSE — Cursor Development Specification
+# Fase 1: Ciclo Completo de Funcionalidade Básica (YouTube Shorts Only)
+
+## CONTEXTO DO PROJETO
+
+ReelVerse é uma plataforma web que recebe o link de um YouTube Short e entrega uma análise de engenharia reversa completa do vídeo. O usuário cola o link, o sistema extrai dados, processa com IA e exibe um relatório visual com insights acionáveis.
+
+**Escopo desta fase:** Fechar o ciclo funcional completo (input → extração → processamento → análise IA → exibição) com YouTube Shorts apenas. Sem autenticação, sem planos, sem histórico persistente por usuário. O objetivo é ter o pipeline end-to-end funcionando.
+
+---
+
+## ARQUITETURA
+
+```
+Monorepo (Turborepo)
+├── apps/
+│   ├── web/          → Next.js 14+ (App Router, TypeScript, Tailwind CSS)
+│   └── api/          → Node.js + Fastify (TypeScript)
+├── packages/
+│   ├── shared/       → Types compartilhados, schemas Zod, constantes
+│   └── config/       → ESLint, TSConfig compartilhados
+├── docker-compose.yml
+├── turbo.json
+└── package.json
+```
+
+### Comunicação entre serviços
+- Frontend ↔ Backend: REST API (JSON)
+- Backend → Workers: BullMQ (Redis)
+- Frontend polling: GET /api/analysis/:id (poll a cada 2s até status=completed)
+
+---
+
+## TECH STACK (exatamente estas versões/libs)
+
+### Backend (apps/api)
+- **Runtime:** Node.js 20+
+- **Framework:** Fastify 4.x com @fastify/cors, @fastify/sensible
+- **Linguagem:** TypeScript 5.x strict mode
+- **Fila de jobs:** BullMQ 5.x
+- **Banco de dados:** PostgreSQL 16 via Drizzle ORM (drizzle-orm + drizzle-kit + pg driver)
+- **Cache:** ioredis 5.x (mesmo Redis do BullMQ)
+- **Validação:** Zod 3.x para input/output validation
+- **HTTP client:** undici (nativo do Node) para chamadas a APIs externas
+- **Extração de vídeo:** yt-dlp (binary, chamado via child_process.execFile)
+- **Processamento de vídeo:** FFmpeg 6+ (binary, chamado via child_process.execFile)
+- **Transcrição:** OpenAI Whisper API (via openai SDK)
+- **Análise de IA:** Anthropic Claude API (via @anthropic-ai/sdk) — modelo claude-sonnet-4-20250514
+- **Variáveis de ambiente:** dotenv + Zod schema validation no boot
+
+### Frontend (apps/web)
+- **Framework:** Next.js 14+ com App Router
+- **Linguagem:** TypeScript 5.x strict mode
+- **Estilização:** Tailwind CSS 3.x
+- **Componentes UI:** shadcn/ui (instalar os necessários: card, button, input, badge, progress, skeleton, tabs, separator)
+- **Gráficos:** Recharts para radar chart e visualizações
+- **Ícones:** Lucide React
+- **HTTP:** fetch nativo com wrapper tipado
+- **Estado:** React hooks (useState, useEffect, useCallback) — sem state management externo
+
+### Infraestrutura Local (Docker Compose)
+- PostgreSQL 16 (porta 5432)
+- Redis 7 (porta 6379)
+- yt-dlp e FFmpeg instalados no host ou no container do API
+
+---
+
+## MODELO DE DADOS (Drizzle ORM Schema)
+
+Arquivo: `apps/api/src/db/schema.ts`
+
+```typescript
+import { pgTable, uuid, text, integer, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
+
+export const platformEnum = pgEnum('platform', ['youtube_shorts', 'tiktok', 'instagram_reels']);
+export const analysisStatusEnum = pgEnum('analysis_status', ['pending', 'extracting', 'processing_video', 'transcribing', 'analyzing', 'completed', 'failed']);
+
+export const analyses = pgTable('analyses', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  videoUrl: text('video_url').notNull(),
+  platform: platformEnum('platform').notNull().default('youtube_shorts'),
+  status: analysisStatusEnum('status').notNull().default('pending'),
+  errorMessage: text('error_message'),
+  
+  // Metadados extraídos do vídeo
+  videoMeta: jsonb('video_meta').$type<VideoMeta>(),
+  
+  // Dados intermediários do processamento
+  transcription: jsonb('transcription').$type<TranscriptionData>(),
+  frameAnalysis: jsonb('frame_analysis').$type<FrameAnalysisData>(),
+  
+  // Resultado final da análise IA
+  result: jsonb('result').$type<AnalysisResult>(),
+  
+  // Custo tracking (para monitorar gastos com APIs)
+  processingCostCents: integer('processing_cost_cents').default(0),
+  processingTimeMs: integer('processing_time_ms'),
+  
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+});
+```
+
+### Types Compartilhados (packages/shared/src/types.ts)
+
+```typescript
+// Metadados extraídos do YouTube Short
+export interface VideoMeta {
+  title: string;
+  description: string;
+  channelName: string;
+  channelUrl: string;
+  publishDate: string;
+  duration: number; // segundos
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  hashtags: string[];
+  thumbnailUrl: string;
+  videoId: string;
+}
+
+// Dados de transcrição (Whisper)
+export interface TranscriptionData {
+  fullText: string;
+  segments: Array<{
+    start: number;  // segundos
+    end: number;
+    text: string;
+  }>;
+  language: string;
+  hasVoiceover: boolean;
+}
+
+// Análise dos frames (Vision AI)
+export interface FrameAnalysisData {
+  totalFramesAnalyzed: number;
+  cutTimestamps: number[];         // segundos onde ocorrem cortes
+  cutFrequencyPerSecond: number;
+  textOverlays: Array<{
+    timestamp: number;
+    text: string;
+    position: string; // top, center, bottom
+  }>;
+  visualElements: string[];        // resumo dos elementos visuais dominantes
+  framingPatterns: string[];       // close-up, medium, wide, etc.
+}
+
+// Resultado final da análise IA (output do Claude)
+export interface AnalysisResult {
+  // Scores (0-100)
+  overallScore: number;
+  hookScore: number;
+  narrativeScore: number;
+  copyScore: number;
+  editingScore: number;
+  audioScore: number;
+  ctaScore: number;
+  
+  // Análise do Hook (primeiros 1-3 segundos)
+  hook: {
+    type: string;           // pergunta, choque, promessa, curiosidade, polêmica, visual_impactante
+    description: string;
+    textUsed: string | null;
+    effectiveness: string;  // análise de por que funciona ou não
+    improvementTip: string;
+  };
+  
+  // Estrutura Narrativa
+  narrative: {
+    structure: string;      // tipo: problema-solução, storytelling, tutorial, lista, antes-depois, etc.
+    phases: Array<{
+      name: string;         // gancho, desenvolvimento, climax, cta
+      startTime: number;
+      endTime: number;
+      description: string;
+    }>;
+    pacing: string;         // rápido, médio, lento — com justificativa
+    effectiveness: string;
+  };
+  
+  // Copywriting & Texto
+  copy: {
+    mainMessage: string;
+    toneOfVoice: string;        // informal, autoritário, empático, humorístico, etc.
+    copyFormulas: string[];     // AIDA, PAS, BAB, etc. identificadas
+    powerWords: string[];
+    hashtagStrategy: string;
+    captionAnalysis: string;
+  };
+  
+  // Edição & Ritmo Visual
+  editing: {
+    totalCuts: number;
+    avgCutDuration: number;     // segundos
+    transitionTypes: string[];
+    visualEffects: string[];
+    pacing: string;
+    standoutTechnique: string;
+  };
+  
+  // Áudio & Música
+  audio: {
+    hasMusic: boolean;
+    musicMood: string | null;
+    hasVoiceover: boolean;
+    voiceoverStyle: string | null;    // narrativo, conversacional, energético
+    soundEffects: string[];
+    audioVideoSync: string;           // como o áudio complementa o visual
+  };
+  
+  // CTA (Call to Action)
+  cta: {
+    hasCta: boolean;
+    type: string | null;              // seguir, curtir, comentar, link, salvar
+    placement: string | null;         // início, meio, fim
+    text: string | null;
+    effectiveness: string;
+  };
+  
+  // Sugestões de Replicação
+  replication: {
+    summary: string;                  // resumo de 2-3 frases do que torna o vídeo eficaz
+    keyTakeaways: string[];           // 3-5 pontos principais para replicar
+    templateScript: string;           // script modelo baseado na estrutura do vídeo
+    whatToAvoid: string[];            // erros potenciais ao replicar
+  };
+}
+
+// Status tracking para o frontend
+export interface AnalysisStatus {
+  id: string;
+  status: 'pending' | 'extracting' | 'processing_video' | 'transcribing' | 'analyzing' | 'completed' | 'failed';
+  errorMessage?: string;
+  videoMeta?: VideoMeta;
+  result?: AnalysisResult;
+  processingTimeMs?: number;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// Input validation
+export interface CreateAnalysisInput {
+  videoUrl: string;
+}
+```
+
+---
+
+## API ENDPOINTS (apps/api)
+
+### POST /api/analysis
+Cria uma nova análise. Valida o URL (deve ser youtube.com/shorts/* ou youtu.be/*), cria registro no banco com status "pending" e enfileira o job no BullMQ.
+
+**Request body:**
+```json
+{ "videoUrl": "https://www.youtube.com/shorts/VIDEO_ID" }
+```
+
+**Response (201):**
+```json
+{ "id": "uuid", "status": "pending", "createdAt": "ISO8601" }
+```
+
+**Validação do URL (Zod):**
+```typescript
+const youtubeShortRegex = /^https?:\/\/(www\.)?(youtube\.com\/shorts\/[\w-]+|youtu\.be\/[\w-]+)/;
+
+const createAnalysisSchema = z.object({
+  videoUrl: z.string().url().regex(youtubeShortRegex, 'URL deve ser um YouTube Short válido'),
+});
+```
+
+### GET /api/analysis/:id
+Retorna o status atual da análise. O frontend faz polling neste endpoint.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "status": "analyzing",
+  "videoMeta": { ... },       // disponível após status "extracting" concluir
+  "result": null,             // null até status "completed"
+  "processingTimeMs": null,
+  "createdAt": "ISO8601",
+  "completedAt": null
+}
+```
+
+Quando status="completed", result contém o AnalysisResult completo.
+Quando status="failed", errorMessage contém a descrição do erro.
+
+### GET /api/analysis/:id/cache-check (otimização)
+Antes de criar uma análise, o frontend pode verificar se o mesmo URL já foi analisado nas últimas 24h.
+
+**Query:** `?videoUrl=encoded_url`
+**Response:** `{ "cached": true, "analysisId": "uuid" }` ou `{ "cached": false }`
+
+---
+
+## PIPELINE DE PROCESSAMENTO (BullMQ Worker)
+
+Arquivo: `apps/api/src/workers/analysis.worker.ts`
+
+O worker consome jobs da fila "analysis" e executa as etapas sequencialmente, atualizando o status no banco após cada etapa. Se qualquer etapa falhar, marca status="failed" com a mensagem de erro.
+
+### Etapa 1: Extração (status: "extracting")
+
+```typescript
+// Usa yt-dlp para extrair metadados e baixar o vídeo
+// Comando: yt-dlp --dump-json URL → metadados JSON
+// Comando: yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" -o TEMP_PATH URL → download
+
+async function extractVideo(videoUrl: string, tempDir: string): Promise<{ videoPath: string; meta: VideoMeta }> {
+  // 1. Extrair metadados com --dump-json
+  const metaJson = await execCommand('yt-dlp', ['--dump-json', videoUrl]);
+  const raw = JSON.parse(metaJson);
+  
+  const meta: VideoMeta = {
+    title: raw.title || '',
+    description: raw.description || '',
+    channelName: raw.channel || raw.uploader || '',
+    channelUrl: raw.channel_url || '',
+    publishDate: raw.upload_date || '',
+    duration: raw.duration || 0,
+    viewCount: raw.view_count || 0,
+    likeCount: raw.like_count || 0,
+    commentCount: raw.comment_count || 0,
+    hashtags: extractHashtags(raw.description),
+    thumbnailUrl: raw.thumbnail || '',
+    videoId: raw.id || '',
+  };
+  
+  // 2. Baixar vídeo
+  const videoPath = path.join(tempDir, `${meta.videoId}.mp4`);
+  await execCommand('yt-dlp', [
+    '-f', 'bestvideo[height<=720]+bestaudio/best[height<=720]',
+    '--merge-output-format', 'mp4',
+    '-o', videoPath,
+    videoUrl,
+  ]);
+  
+  return { videoPath, meta };
+}
+```
+
+### Etapa 2: Processamento de Vídeo com FFmpeg (status: "processing_video")
+
+```typescript
+async function processVideo(videoPath: string, tempDir: string): Promise<{
+  audioPath: string;
+  framesDir: string;
+  cutTimestamps: number[];
+  duration: number;
+}> {
+  const audioPath = path.join(tempDir, 'audio.mp3');
+  const framesDir = path.join(tempDir, 'frames');
+  await fs.mkdir(framesDir, { recursive: true });
+  
+  // 1. Extrair áudio
+  await execCommand('ffmpeg', [
+    '-i', videoPath,
+    '-vn', '-acodec', 'libmp3lame', '-q:a', '4',
+    audioPath,
+  ]);
+  
+  // 2. Extrair frames (1 por segundo)
+  await execCommand('ffmpeg', [
+    '-i', videoPath,
+    '-vf', 'fps=1',
+    '-q:v', '3',
+    path.join(framesDir, 'frame_%03d.jpg'),
+  ]);
+  
+  // 3. Detectar cortes (scene change detection)
+  const sceneOutput = await execCommand('ffmpeg', [
+    '-i', videoPath,
+    '-filter:v', "select='gt(scene,0.3)',showinfo",
+    '-f', 'null', '-',
+  ], { captureStderr: true });
+  
+  const cutTimestamps = parseSceneDetection(sceneOutput);
+  
+  return { audioPath, framesDir, cutTimestamps, duration: /* from ffprobe */ };
+}
+```
+
+### Etapa 3: Transcrição com Whisper (status: "transcribing")
+
+```typescript
+import OpenAI from 'openai';
+
+async function transcribeAudio(audioPath: string): Promise<TranscriptionData> {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  
+  const file = fs.createReadStream(audioPath);
+  const response = await openai.audio.transcriptions.create({
+    model: 'whisper-1',
+    file,
+    response_format: 'verbose_json',
+    timestamp_granularities: ['segment'],
+  });
+  
+  return {
+    fullText: response.text,
+    segments: (response.segments || []).map(s => ({
+      start: s.start,
+      end: s.end,
+      text: s.text.trim(),
+    })),
+    language: response.language || 'unknown',
+    hasVoiceover: response.text.trim().length > 10,
+  };
+}
+```
+
+### Etapa 4: Análise Consolidada com Claude (status: "analyzing")
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk';
+
+async function analyzeWithAI(params: {
+  meta: VideoMeta;
+  transcription: TranscriptionData;
+  frameAnalysis: FrameAnalysisData;
+}): Promise<AnalysisResult> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  
+  // Montar o prompt com todos os dados coletados
+  const prompt = buildAnalysisPrompt(params);
+  
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 4096,
+    messages: [{ role: 'user', content: prompt }],
+    system: ANALYSIS_SYSTEM_PROMPT,
+  });
+  
+  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  
+  // Extrair JSON do response (pode vir com markdown code fences)
+  const jsonStr = text.replace(/```json\n?|\n?```/g, '').trim();
+  const parsed = JSON.parse(jsonStr);
+  
+  // Validar com Zod schema
+  return analysisResultSchema.parse(parsed);
+}
+```
+
+**IMPORTANTE — SYSTEM PROMPT para o Claude (arquivo separado: `apps/api/src/prompts/analysis.ts`):**
+
+```typescript
+export const ANALYSIS_SYSTEM_PROMPT = `Você é um especialista em análise de vídeos curtos para redes sociais, com profundo conhecimento em copywriting, storytelling, edição de vídeo, estratégias de crescimento no YouTube Shorts, TikTok e Instagram Reels.
+
+Sua tarefa é realizar uma engenharia reversa completa de um vídeo curto com base nos dados fornecidos. Você deve analisar CADA dimensão criteriosamente e retornar APENAS um JSON válido (sem markdown, sem explicações fora do JSON) seguindo EXATAMENTE o schema especificado.
+
+REGRAS:
+- Scores de 0 a 100, onde 0 = péssimo e 100 = excepcional
+- Seja específico e acionável nas análises, nunca genérico
+- Use dados concretos do vídeo para justificar cada score
+- Sugestões de replicação devem ser práticas e aplicáveis
+- O templateScript deve ser um roteiro genérico baseado na estrutura identificada
+- Responda SEMPRE em português brasileiro
+- Retorne APENAS o JSON, sem nenhum texto antes ou depois`;
+
+export function buildAnalysisPrompt(params: {
+  meta: VideoMeta;
+  transcription: TranscriptionData;
+  frameAnalysis: FrameAnalysisData;
+}): string {
+  const { meta, transcription, frameAnalysis } = params;
+  
+  return `Analise o seguinte YouTube Short e retorne o JSON de engenharia reversa:
+
+<video_metadata>
+Título: ${meta.title}
+Canal: ${meta.channelName}
+Descrição: ${meta.description}
+Hashtags: ${meta.hashtags.join(', ') || 'Nenhuma'}
+Duração: ${meta.duration} segundos
+Views: ${meta.viewCount.toLocaleString()}
+Likes: ${meta.likeCount.toLocaleString()}
+Comentários: ${meta.commentCount.toLocaleString()}
+Data de publicação: ${meta.publishDate}
+</video_metadata>
+
+<transcription>
+Idioma detectado: ${transcription.language}
+Tem voiceover/narração: ${transcription.hasVoiceover ? 'Sim' : 'Não'}
+
+Transcrição completa com timestamps:
+${transcription.segments.map(s => `[${s.start.toFixed(1)}s - ${s.end.toFixed(1)}s] ${s.text}`).join('\n')}
+
+Texto completo: ${transcription.fullText}
+</transcription>
+
+<visual_analysis>
+Total de frames analisados: ${frameAnalysis.totalFramesAnalyzed}
+Frequência de cortes: ${frameAnalysis.cutFrequencyPerSecond.toFixed(2)} cortes/segundo
+Timestamps dos cortes: ${frameAnalysis.cutTimestamps.map(t => t.toFixed(1) + 's').join(', ')}
+
+Textos sobrepostos no vídeo:
+${frameAnalysis.textOverlays.map(t => `[${t.timestamp.toFixed(1)}s] "${t.text}" (${t.position})`).join('\n') || 'Nenhum texto sobreposto detectado'}
+
+Elementos visuais dominantes: ${frameAnalysis.visualElements.join(', ')}
+Padrões de enquadramento: ${frameAnalysis.framingPatterns.join(', ')}
+</visual_analysis>
+
+Retorne o JSON seguindo EXATAMENTE este schema TypeScript (sem campos extras, sem campos faltando):
+
+{
+  overallScore: number,
+  hookScore: number,
+  narrativeScore: number,
+  copyScore: number,
+  editingScore: number,
+  audioScore: number,
+  ctaScore: number,
+  hook: { type: string, description: string, textUsed: string | null, effectiveness: string, improvementTip: string },
+  narrative: { structure: string, phases: [{ name: string, startTime: number, endTime: number, description: string }], pacing: string, effectiveness: string },
+  copy: { mainMessage: string, toneOfVoice: string, copyFormulas: string[], powerWords: string[], hashtagStrategy: string, captionAnalysis: string },
+  editing: { totalCuts: number, avgCutDuration: number, transitionTypes: string[], visualEffects: string[], pacing: string, standoutTechnique: string },
+  audio: { hasMusic: boolean, musicMood: string | null, hasVoiceover: boolean, voiceoverStyle: string | null, soundEffects: string[], audioVideoSync: string },
+  cta: { hasCta: boolean, type: string | null, placement: string | null, text: string | null, effectiveness: string },
+  replication: { summary: string, keyTakeaways: string[], templateScript: string, whatToAvoid: string[] }
+}`;
+}
+```
+
+### Análise de Frames com Vision API
+
+Para a análise visual, enviar frames em batch para o Claude Vision:
+
+```typescript
+async function analyzeFrames(framesDir: string, cutTimestamps: number[]): Promise<FrameAnalysisData> {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  
+  // Selecionar frames estratégicos: primeiro, último, e frames nos pontos de corte
+  const frameFiles = await fs.readdir(framesDir);
+  const selectedFrames = selectKeyFrames(frameFiles, cutTimestamps);
+  
+  // Limitar a ~10 frames para controlar custo
+  const framesToAnalyze = selectedFrames.slice(0, 10);
+  
+  const frameContents = await Promise.all(
+    framesToAnalyze.map(async (f) => ({
+      type: 'image' as const,
+      source: {
+        type: 'base64' as const,
+        media_type: 'image/jpeg' as const,
+        data: (await fs.readFile(path.join(framesDir, f))).toString('base64'),
+      },
+    }))
+  );
+  
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    messages: [{
+      role: 'user',
+      content: [
+        ...frameContents,
+        {
+          type: 'text',
+          text: `Estes são ${framesToAnalyze.length} frames-chave de um vídeo curto (YouTube Short), extraídos a 1fps.
+          
+Analise e retorne APENAS um JSON com:
+{
+  "textOverlays": [{ "frameIndex": number, "text": "texto detectado", "position": "top|center|bottom" }],
+  "visualElements": ["lista de elementos visuais dominantes identificados"],
+  "framingPatterns": ["lista de padrões: close-up, medium-shot, wide-shot, etc"],
+  "hasPersonFacing": boolean,
+  "dominantColors": ["cores dominantes"],
+  "sceneChanges": ["descrição breve de cada mudança de cena"]
+}`
+        }
+      ],
+    }],
+  });
+  
+  // Parse e retornar como FrameAnalysisData
+  // ... merge com cutTimestamps e calcular frequência
+}
+```
+
+---
+
+## FRONTEND (apps/web)
+
+### Estrutura de Páginas (App Router)
+
+```
+apps/web/src/app/
+├── layout.tsx          → Root layout (fonte, metadata, providers)
+├── page.tsx            → Home: input de URL + exemplos
+├── analysis/
+│   └── [id]/
+│       └── page.tsx    → Relatório de análise (com polling)
+├── globals.css         → Tailwind imports
+└── components/
+    ├── url-input.tsx           → Campo de input com validação + botão
+    ├── analysis-loading.tsx    → Tela de loading com progresso por etapa
+    ├── analysis-report.tsx     → Container do relatório completo
+    ├── score-card.tsx          → Componente circular de score (0-100)
+    ├── radar-chart.tsx         → Gráfico radar com Recharts (6 dimensões)
+    ├── narrative-timeline.tsx  → Timeline visual das fases do vídeo
+    ├── hook-analysis.tsx       → Card de análise do gancho
+    ├── copy-analysis.tsx       → Card de análise de copywriting
+    ├── editing-analysis.tsx    → Card de análise de edição
+    ├── audio-analysis.tsx      → Card de análise de áudio
+    ├── cta-analysis.tsx        → Card de análise do CTA
+    ├── replication-card.tsx    → Card de sugestões de replicação
+    ├── video-meta-card.tsx     → Thumbnail + metadados do vídeo
+    └── score-badge.tsx         → Badge colorido (vermelho/amarelo/verde) por faixa de score
+```
+
+### Fluxo da Home Page
+
+```typescript
+// app/page.tsx
+'use client';
+
+// 1. Usuário digita/cola URL no input
+// 2. Validação client-side (regex YouTube Shorts)
+// 3. POST /api/analysis com o URL
+// 4. Recebe o ID → redirect para /analysis/[id]
+```
+
+### Fluxo da Página de Análise
+
+```typescript
+// app/analysis/[id]/page.tsx
+'use client';
+
+// 1. Ao montar, iniciar polling GET /api/analysis/:id a cada 2 segundos
+// 2. Enquanto status != completed && status != failed:
+//    - Mostrar componente <AnalysisLoading> com etapa atual
+//    - Quando videoMeta estiver disponível, já mostrar thumbnail + metadados
+// 3. Quando status == completed:
+//    - Parar polling
+//    - Renderizar <AnalysisReport> com todos os dados
+// 4. Quando status == failed:
+//    - Parar polling
+//    - Mostrar mensagem de erro com opção de tentar novamente
+```
+
+### Componente: Score Card (score-card.tsx)
+
+Componente circular visual que mostra score de 0-100 com cores:
+- 0-39: vermelho (#EF4444)
+- 40-69: amarelo (#F59E0B)
+- 70-100: verde (#10B981)
+
+Usar SVG com stroke-dasharray para o arco circular animado.
+
+### Componente: Radar Chart (radar-chart.tsx)
+
+Recharts RadarChart com 6 dimensões:
+- Hook, Narrativa, Copy, Edição, Áudio, CTA
+- Preenchimento semitransparente com cor primária
+- Labels nas pontas com o nome + score
+
+### Componente: Narrative Timeline (narrative-timeline.tsx)
+
+Barra horizontal representando a duração do vídeo, com segmentos coloridos para cada fase narrativa (gancho, desenvolvimento, clímax, CTA). Timestamps acima. Clicável para expandir descrição de cada fase.
+
+### Componente: Replication Card (replication-card.tsx)
+
+Card destaque com:
+- Resumo em 2-3 frases
+- Lista de Key Takeaways (com ícones de check)
+- Template Script em bloco formatado (estilo code block mas com visual editorial)
+- "O que evitar" em lista com ícones de warning
+
+### Design System
+
+```
+Cores:
+- Primary: #1A73E8 (azul)
+- Background: #0F0F1A (dark mode default)
+- Surface: #1A1A2E
+- Surface elevated: #252540
+- Text primary: #F0F0F5
+- Text secondary: #8B8BA3
+- Success: #10B981
+- Warning: #F59E0B
+- Error: #EF4444
+- Accent gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+
+Tipografia:
+- Font: Inter (Google Fonts)
+- Headings: font-bold
+- Body: font-normal
+
+Border radius: rounded-xl (cards), rounded-2xl (containers maiores)
+Shadows: dark theme shadows sutis com opacidade baixa
+```
+
+A plataforma deve ser DARK MODE por padrão (sem toggle de tema no MVP).
+
+---
+
+## VARIÁVEIS DE AMBIENTE
+
+```env
+# apps/api/.env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/reelverse
+REDIS_URL=redis://localhost:6379
+ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...
+TEMP_DIR=/tmp/reelverse
+PORT=3001
+NODE_ENV=development
+
+# apps/web/.env.local
+NEXT_PUBLIC_API_URL=http://localhost:3001
+```
+
+---
+
+## DOCKER COMPOSE
+
+```yaml
+version: '3.8'
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: reelverse
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '6379:6379'
+    volumes:
+      - redisdata:/data
+
+volumes:
+  pgdata:
+  redisdata:
+```
+
+---
+
+## TRATAMENTO DE ERROS E RESILIÊNCIA
+
+### Worker: Retry Strategy
+```typescript
+const analysisQueue = new Queue('analysis', { connection: redis });
+
+const worker = new Worker('analysis', processAnalysis, {
+  connection: redis,
+  concurrency: 2,           // processar 2 jobs simultaneamente
+  limiter: { max: 5, duration: 60000 },  // max 5 jobs por minuto
+});
+
+// Retry: 3 tentativas com backoff exponencial
+const job = await analysisQueue.add('analyze', { analysisId, videoUrl }, {
+  attempts: 3,
+  backoff: { type: 'exponential', delay: 5000 },
+  removeOnComplete: 100,    // manter últimos 100 jobs completos
+  removeOnFail: 50,
+});
+```
+
+### Cleanup de Arquivos Temporários
+Após cada job (sucesso ou falha), deletar o diretório temporário:
+```typescript
+finally {
+  await fs.rm(tempDir, { recursive: true, force: true });
+}
+```
+
+### Timeout por Etapa
+- Extração (yt-dlp): timeout 30s
+- FFmpeg processing: timeout 60s
+- Whisper transcription: timeout 30s
+- Claude Vision analysis: timeout 45s
+- Claude text analysis: timeout 60s
+- Total máximo por job: 240s (4 min)
+
+---
+
+## COMANDOS DE DESENVOLVIMENTO
+
+```bash
+# Instalar tudo
+npm install
+
+# Iniciar infraestrutura
+docker compose up -d
+
+# Rodar migrations
+cd apps/api && npx drizzle-kit push
+
+# Desenvolvimento (roda tudo com Turborepo)
+npm run dev
+
+# Individualmente:
+cd apps/web && npm run dev    # Next.js em localhost:3000
+cd apps/api && npm run dev    # Fastify em localhost:3001
+```
+
+---
+
+## PONTOS DE ATENÇÃO CRÍTICOS
+
+1. **yt-dlp deve estar instalado globalmente no sistema.** Verificar no boot do worker e falhar fast com mensagem clara se não encontrar.
+
+2. **FFmpeg deve estar instalado globalmente.** Mesmo tratamento.
+
+3. **Limpar SEMPRE os arquivos temporários.** O diretório temp pode encher rápido com vídeos e frames. Usar try/finally no worker.
+
+4. **Cache de análises.** Antes de criar um novo job, verificar se o mesmo videoUrl já foi analisado nas últimas 24h. Se sim, retornar o resultado cacheado imediatamente.
+
+5. **Validar o JSON do Claude.** O LLM pode retornar JSON mal-formado. Implementar: (a) strip de markdown fences, (b) JSON.parse com try/catch, (c) validação Zod, (d) se falhar, retry com prompt mais assertivo.
+
+6. **Controlar custos.** Logar o custo estimado por análise (tokens usados × preço por token). Campo processing_cost_cents no banco.
+
+7. **Rate limiting básico.** No MVP sem auth, implementar rate limit por IP: máximo 5 análises por hora por IP. Usar ioredis com TTL.
+
+8. **CORS.** Configurar @fastify/cors para aceitar requests de localhost:3000 (dev) e do domínio de produção.
+
+9. **Frames para Vision API.** Não enviar todos os frames. Selecionar estrategicamente: frame 1 (gancho), frames nos pontos de corte, frame do meio, último frame. Máximo 10 frames por análise.
+
+10. **Erros amigáveis no frontend.** Nunca mostrar stack traces. Mapear erros do backend para mensagens amigáveis em português.
