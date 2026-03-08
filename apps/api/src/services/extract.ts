@@ -13,7 +13,12 @@ export async function extractVideo(
   videoUrl: string,
   tempDir: string
 ): Promise<{ videoPath: string; meta: VideoMeta }> {
-  const metaJson = await execCommand('yt-dlp', ['--dump-json', videoUrl], {
+  const metaJson = await execCommand('yt-dlp', [
+    '--dump-json',
+    '--no-warnings',
+    '--extractor-args', 'youtube:player_client=ios',
+    videoUrl
+  ], {
     timeout: 30000,
   });
   const raw = JSON.parse(metaJson) as Record<string, unknown>;
@@ -41,6 +46,8 @@ export async function extractVideo(
       'bestvideo[height<=720]+bestaudio/best[height<=720]',
       '--merge-output-format',
       'mp4',
+      '--extractor-args',
+      'youtube:player_client=ios',
       '-o',
       videoPath,
       videoUrl,
