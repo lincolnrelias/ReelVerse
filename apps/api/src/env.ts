@@ -11,7 +11,7 @@ const envSchema = z.object({
   TEMP_DIR: z.string().min(1).default('/tmp/reelverse'),
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  FRONTEND_URL: z.string().url().optional(),
+  FRONTEND_URL: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
