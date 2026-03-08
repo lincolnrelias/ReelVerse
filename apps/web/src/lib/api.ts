@@ -1,7 +1,7 @@
 import type { AnalysisStatus, CreateAnalysisInput } from '@reelverse/shared';
 import * as Sentry from '@sentry/nextjs';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001').replace(/\/$/, '');
 
 function getMessage(err: unknown): string {
   if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: string }).message === 'string') {
