@@ -12,6 +12,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().optional(),
+  YOUTUBE_COOKIES: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
