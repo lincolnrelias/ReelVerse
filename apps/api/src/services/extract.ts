@@ -1,7 +1,8 @@
+import fs from 'fs';
 import path from 'path';
-import fs from 'fs/promises';
+import { pipeline } from 'stream/promises';
+import fetch from 'node-fetch';
 import type { VideoMeta } from '@reelverse/shared';
-import { execCommand } from '../lib/exec.js';
 import { env } from '../env.js';
 
 function extractHashtags(description: string): string[] {
@@ -10,68 +11,80 @@ function extractHashtags(description: string): string[] {
   return matches ? [...new Set(matches)] : [];
 }
 
+function extractVideoId(url: string): string | null {
+  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})|youtube\.com\/shorts\/([^"&?\/\s]{11})/;
+  const match = url.match(ytRegex);
+  return match ? (match[1] || match[2]) : null;
+}
+
 export async function extractVideo(
   videoUrl: string,
   tempDir: string
 ): Promise<{ videoPath: string; meta: VideoMeta }> {
-  const args = [
-    '--dump-json',
-    '--no-warnings',
-    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-  ];
-
-  if (env.YOUTUBE_COOKIES) {
-    const cookiesPath = path.join(tempDir, 'youtube-cookies.txt');
-    await fs.writeFile(cookiesPath, env.YOUTUBE_COOKIES, 'utf-8');
-    args.push('--cookies', cookiesPath);
+  
+  if (!env.RAPIDAPI_KEY) {
+    throw new Error('RAPIDAPI_KEY não configurada no ambiente.');
   }
 
-  args.push(videoUrl);
+  const videoId = extractVideoId(videoUrl);
+  if (!videoId) {
+    throw new Error('URL inválida ou ID do vídeo não encontrado.');
+  }
 
-  const metaJson = await execCommand('yt-dlp', args, {
-    timeout: 30000,
-  });
-  const raw = JSON.parse(metaJson) as Record<string, unknown>;
-
-  const meta: VideoMeta = {
-    title: (raw.title as string) || '',
-    description: (raw.description as string) || '',
-    channelName: (raw.channel as string) || (raw.uploader as string) || '',
-    channelUrl: (raw.channel_url as string) || '',
-    publishDate: (raw.upload_date as string) || '',
-    duration: Number(raw.duration) || 0,
-    viewCount: Number(raw.view_count) || 0,
-    likeCount: Number(raw.like_count) || 0,
-    commentCount: Number(raw.comment_count) || 0,
-    hashtags: extractHashtags((raw.description as string) || ''),
-    thumbnailUrl: (raw.thumbnail as string) || '',
-    videoId: (raw.id as string) || '',
+  // Usando a API "YouTube Media Downloader" do RapidAPI
+  const options = {
+    method: 'GET',
+    headers: {
+      'x-rapidapi-key': env.RAPIDAPI_KEY,
+      'x-rapidapi-host': 'youtube-media-downloader.p.rapidapi.com'
+    }
   };
 
+  const response = await fetch(`https://youtube-media-downloader.p.rapidapi.com/v2/video/details?videoId=${videoId}`, options);
+  
+  if (!response.ok) {
+    throw new Error(`Falha ao obter dados da API (Status: ${response.status})`);
+  }
+
+  const raw = await response.json() as any;
+
+  if (!raw.status || !raw.title) {
+    throw new Error('A API retornou dados inválidos ou o vídeo não pôde ser processado.');
+  }
+
+  const meta: VideoMeta = {
+    title: raw.title || '',
+    description: raw.description || '',
+    channelName: raw.author || '',
+    channelUrl: `https://youtube.com/channel/${raw.channelId}`,
+    publishDate: raw.publishedAt || '',
+    duration: raw.lengthSeconds ? Number(raw.lengthSeconds) : 0,
+    viewCount: Number(raw.viewCount) || 0,
+    likeCount: 0, // RapidAPI endpoint usually doesn't return exact like counts on basic plans
+    commentCount: 0,
+    hashtags: extractHashtags(raw.description || ''),
+    thumbnailUrl: raw.thumbnails?.[raw.thumbnails.length - 1]?.url || '',
+    videoId: videoId,
+  };
+
+  // Find best MP4 video with audio
+  const videos = raw.videos?.items || [];
+  const bestFormat = videos.find((v: any) => v.extension === 'mp4' && v.hasAudio) || videos.find((v: any) => v.extension === 'mp4');
+
+  if (!bestFormat || !bestFormat.url) {
+    throw new Error('Nenhum formato MP4 adequado foi retornado pela API.');
+  }
+
+  const downloadUrl = bestFormat.url;
   const videoPath = path.join(tempDir, `${meta.videoId}.mp4`);
-  const downloadArgs = [
-    '-f',
-    'bestvideo[height<=720]+bestaudio/best[height<=720]',
-    '--merge-output-format',
-    'mp4',
-    '--user-agent',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    '-o',
-    videoPath,
-  ];
 
-  if (env.YOUTUBE_COOKIES) {
-    downloadArgs.push('--cookies', path.join(tempDir, 'youtube-cookies.txt'));
+  // Stream download directly from the RapidAPI CDN URL
+  const videoResponse = await fetch(downloadUrl);
+  if (!videoResponse.ok) {
+    throw new Error(`Falha ao baixar o arquivo final do vídeo (Status ${videoResponse.status})`);
   }
 
-  downloadArgs.push(videoUrl);
-
-  await execCommand('yt-dlp', downloadArgs, { timeout: 120000 });
-
-  const exists = await fs.stat(videoPath).catch(() => null);
-  if (!exists || !exists.isFile()) {
-    throw new Error('Vídeo não foi baixado corretamente');
-  }
+  await pipeline(videoResponse.body as any, fs.createWriteStream(videoPath));
 
   return { videoPath, meta };
 }

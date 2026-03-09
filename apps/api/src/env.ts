@@ -13,6 +13,7 @@ const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   FRONTEND_URL: z.string().optional(),
   YOUTUBE_COOKIES: z.string().optional(),
+  RAPIDAPI_KEY: z.string().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
