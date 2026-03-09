@@ -16,8 +16,7 @@ export async function extractVideo(
 ): Promise<{ videoPath: string; meta: VideoMeta }> {
   const args = [
     '--dump-json',
-    '--no-warnings',
-    '--extractor-args', 'youtube:player_client=android'
+    '--no-warnings'
   ];
 
   if (env.YOUTUBE_COOKIES) {
@@ -54,8 +53,6 @@ export async function extractVideo(
     'bestvideo[height<=720]+bestaudio/best[height<=720]',
     '--merge-output-format',
     'mp4',
-    '--extractor-args',
-    'youtube:player_client=android',
     '-o',
     videoPath,
   ];
