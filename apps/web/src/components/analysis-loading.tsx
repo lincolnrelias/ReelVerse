@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import type { AnalysisStatusEnum } from '@reelverse/shared';
 import type { VideoMeta } from '@reelverse/shared';
 import { Loader2 } from 'lucide-react';
+import { AdBanner } from './ad-banner';
 
 const STEPS: { status: AnalysisStatusEnum; label: string; emoji: string }[] = [
   { status: 'pending', label: 'Na fila de processamento', emoji: '⏳' },
@@ -100,6 +101,15 @@ export function AnalysisLoading({ status, videoMeta }: AnalysisLoadingProps) {
           </div>
         </div>
         
+        {/* Ad Monetization Slot */}
+        <div className="mb-8 relative z-10 w-full animate-fade-in-up delay-3">
+          <AdBanner 
+            dataAdSlot="auto" 
+            dataAdFormat="horizontal" 
+            className="min-h-[100px] bg-black/20 rounded-xl"
+          />
+        </div>
+
         {/* Stepper List */}
         <ul className="space-y-4 relative z-10">
           {STEPS.map((step, i) => {
