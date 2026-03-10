@@ -79,7 +79,15 @@ export async function extractVideo(
   const videoPath = path.join(tempDir, `${meta.videoId}.mp4`);
 
   // Stream download directly from the RapidAPI CDN URL
-  const videoResponse = await fetch(downloadUrl);
+  const videoResponse = await fetch(downloadUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'video/webm,video/ogg,video/*;q=0.9,application/ogg;q=0.7,audio/*;q=0.6,*/*;q=0.5',
+      'Accept-Language': 'en-US,en;q=0.5',
+      'Referer': 'https://www.youtube.com/'
+    }
+  });
+
   if (!videoResponse.ok) {
     throw new Error(`Falha ao baixar o arquivo final do vídeo (Status ${videoResponse.status})`);
   }
