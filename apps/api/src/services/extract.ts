@@ -2,8 +2,12 @@ import fs from 'fs';
 import path from 'path';
 import { pipeline } from 'stream/promises';
 import fetch from 'node-fetch';
+import { exec } from 'child_process';
+import util from 'util';
 import type { VideoMeta } from '@reelverse/shared';
 import { env } from '../env.js';
+
+const execPromise = util.promisify(exec);
 
 function extractHashtags(description: string): string[] {
   if (!description || typeof description !== 'string') return [];
@@ -81,17 +85,52 @@ export async function extractVideo(
     throw new Error('Nenhum formato MP4 proxied adequado foi retornado pela API.');
   }
 
-  const downloadUrl = bestFormat.url;
-  const videoPath = path.join(tempDir, `${meta.videoId}.mp4`);
+  // Find best audio
+  const audios = raw.contents[0].audios || [];
+  let bestAudioFormat = audios.find((a: any) => a.metadata?.mime_type?.includes('audio/mp4'));
+  if (!bestAudioFormat) bestAudioFormat = audios[0];
 
-  // Stream download directly from the smvd.xyz proxied URL
-  const videoResponse = await fetch(downloadUrl);
-
-  if (!videoResponse.ok) {
-    throw new Error(`Falha ao baixar o arquivo final do vídeo (Status ${videoResponse.status})`);
+  if (!bestAudioFormat || !bestAudioFormat.url) {
+    console.warn('Nenhum formato de áudio adequado encontrado, será baixado apenas o vídeo mudo.');
   }
 
-  await pipeline(videoResponse.body as any, fs.createWriteStream(videoPath));
+  const downloadVideoUrl = bestFormat.url;
+  const downloadAudioUrl = bestAudioFormat?.url;
+  
+  const videoOnlyPath = path.join(tempDir, `${meta.videoId}_video_only.mp4`);
+  const audioOnlyPath = path.join(tempDir, `${meta.videoId}_audio_only.mp4`);
+  const videoPath = path.join(tempDir, `${meta.videoId}.mp4`);
+
+  // Stream video
+  const videoResponse = await fetch(downloadVideoUrl);
+  if (!videoResponse.ok) {
+    throw new Error(`Falha ao baixar o arquivo de vídeo original (Status ${videoResponse.status})`);
+  }
+  await pipeline(videoResponse.body as any, fs.createWriteStream(videoOnlyPath));
+
+  // Stream audio if available
+  if (downloadAudioUrl) {
+    const audioResponse = await fetch(downloadAudioUrl);
+    if (!audioResponse.ok) {
+        throw new Error(`Falha ao baixar o arquivo de áudio original (Status ${audioResponse.status})`);
+    }
+    await pipeline(audioResponse.body as any, fs.createWriteStream(audioOnlyPath));
+
+    // Muxing them together using FFmpeg
+    try {
+      await execPromise(`ffmpeg -i "${videoOnlyPath}" -i "${audioOnlyPath}" -c:v copy -c:a aac "${videoPath}"`);
+    } catch (ffmpegErr) {
+      console.error('Falha ao rodar o ffmpeg para juntar video e audio', ffmpegErr);
+      throw new Error('Falha ao fazer muxing de video + audio com ffmpeg');
+    }
+
+    // Clean up temporary files
+    if (fs.existsSync(videoOnlyPath)) fs.unlinkSync(videoOnlyPath);
+    if (fs.existsSync(audioOnlyPath)) fs.unlinkSync(audioOnlyPath);
+  } else {
+    // If no audio downloaded, just rename videoOnly to final video path
+    fs.renameSync(videoOnlyPath, videoPath);
+  }
 
   return { videoPath, meta };
 }
