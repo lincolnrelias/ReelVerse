@@ -57,18 +57,25 @@ export async function extractVideo(
   }
 
   const videoData = raw.metadata;
+  const add = videoData?.additionalData || {};
   
+  const parseViewCount = (text?: string) => {
+      if (!text) return 0;
+      const num = parseInt(text.replace(/[^0-9]/g, ''), 10);
+      return isNaN(num) ? 0 : num;
+  };
+
   const meta: VideoMeta = {
     title: videoData.title || '',
-    description: '', // Description is often removed in v3 of this API to save payload size
+    description: add.short_description || '',
     channelName: videoData.author?.name || '',
     channelUrl: videoData.author?.endpoint?.metadata?.url ? `https://youtube.com${videoData.author.endpoint.metadata.url}` : '',
-    publishDate: '', // Also often omitted in the simplified metadata payload
-    duration: 0, 
-    viewCount: 0,
-    likeCount: 0,
+    publishDate: add.published?.text || '',
+    duration: add.duration ? Number(add.duration) : 0, 
+    viewCount: parseViewCount(add.view_count?.view_count?.text || add.view_count?.original_view_count),
+    likeCount: add.like_count ? Number(add.like_count) : 0,
     commentCount: 0,
-    hashtags: [],
+    hashtags: extractHashtags(add.short_description || videoData.title || ''),
     thumbnailUrl: videoData.thumbnailUrl || '',
     videoId: videoId,
   };
