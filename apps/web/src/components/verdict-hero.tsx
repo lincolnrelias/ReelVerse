@@ -102,14 +102,14 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
             </p>
 
             {videoMeta && (
-              <div className="flex items-center gap-3 rounded-2xl glass p-3 mt-4 max-w-md">
+              <div className="inline-flex text-left items-center gap-3 rounded-2xl glass p-3 mt-4 max-w-md w-fit">
                 {videoMeta.thumbnailUrl && (
                   <img src={videoMeta.thumbnailUrl} alt="" className="w-14 h-9 rounded-lg object-cover flex-shrink-0" />
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-text-primary truncate">{videoMeta.title}</p>
-                  <p className="text-[10px] text-text-secondary truncate mt-0.5">
-                    {videoMeta.channelName} · {videoMeta.duration}s · {videoMeta.viewCount.toLocaleString()} views
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-text-primary pr-2 truncate">{videoMeta.title}</p>
+                  <p className="text-[10px] text-text-secondary pr-2 truncate mt-0.5">
+                    {videoMeta.channelName} • {videoMeta.duration}s • {videoMeta.viewCount.toLocaleString()} views
                   </p>
                 </div>
               </div>
