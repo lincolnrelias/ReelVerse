@@ -12,7 +12,6 @@ import { AudioAnalysis } from './audio-analysis';
 import { CtaAnalysis } from './cta-analysis';
 import { NarrativeTimeline } from './narrative-timeline';
 import { ReplicationCard } from './replication-card';
-import { AdBanner } from './ad-banner';
 
 interface AnalysisReportProps {
   result: AnalysisResult;
@@ -25,8 +24,6 @@ export function AnalysisReport({ result, videoMeta, processingTimeMs }: Analysis
     <div className="space-y-10 max-w-4xl mx-auto">
       {/* 1. Immediate value — how's the video? */}
       <VerdictHero result={result} videoMeta={videoMeta} processingTimeMs={processingTimeMs} />
-
-      <AdBanner dataAdSlot="auto" dataAdFormat="auto" className="my-8" />
 
       {/* 2. Actionable — what to fix, with score projections */}
       <ImprovementRoadmap result={result} />
@@ -56,8 +53,6 @@ export function AnalysisReport({ result, videoMeta, processingTimeMs }: Analysis
 
       {/* 6. Replication playbook */}
       <ReplicationCard replication={result.replication} />
-
-      <AdBanner dataAdSlot="auto" dataAdFormat="auto" className="mt-12 mb-8" />
     </div>
   );
 }
