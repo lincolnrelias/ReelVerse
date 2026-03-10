@@ -48,19 +48,19 @@ export async function extractVideo(
 
   const raw = await response.json() as any;
 
-  if (!raw.status || !raw.title) {
+  if (raw.errorId !== 'Success' && !raw.title) {
     throw new Error('A API retornou dados inválidos ou o vídeo não pôde ser processado.');
   }
 
   const meta: VideoMeta = {
     title: raw.title || '',
     description: raw.description || '',
-    channelName: raw.author || '',
-    channelUrl: `https://youtube.com/channel/${raw.channelId}`,
-    publishDate: raw.publishedAt || '',
+    channelName: raw.channel?.name || '',
+    channelUrl: raw.channel?.handle ? `https://youtube.com/${raw.channel.handle}` : `https://youtube.com/channel/${raw.channel?.id}`,
+    publishDate: raw.publishedTime || '',
     duration: raw.lengthSeconds ? Number(raw.lengthSeconds) : 0,
     viewCount: Number(raw.viewCount) || 0,
-    likeCount: 0, // RapidAPI endpoint usually doesn't return exact like counts on basic plans
+    likeCount: Number(raw.likeCount) || 0,
     commentCount: 0,
     hashtags: extractHashtags(raw.description || ''),
     thumbnailUrl: raw.thumbnails?.[raw.thumbnails.length - 1]?.url || '',
