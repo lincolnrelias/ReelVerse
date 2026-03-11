@@ -1,0 +1,4 @@
+{
+  "errorId": "InvalidParam",
+  "reason": "Parameter 'urlAccess' is not in [normal, blocked]."
+}
