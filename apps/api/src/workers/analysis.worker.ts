@@ -17,6 +17,7 @@ const db = createDb(env.DATABASE_URL);
 interface AnalysisJobData {
   analysisId: string;
   videoUrl: string;
+  language?: 'pt' | 'en';
 }
 
 async function ensureBinaries(): Promise<void> {
@@ -33,7 +34,7 @@ async function ensureBinaries(): Promise<void> {
 }
 
 export async function processAnalysisJob(job: Job<AnalysisJobData, void, string>): Promise<void> {
-  const { analysisId, videoUrl } = job.data;
+  const { analysisId, videoUrl, language } = job.data;
   const tempDir = path.join(env.TEMP_DIR, analysisId);
   const startTime = Date.now();
 
@@ -82,7 +83,7 @@ export async function processAnalysisJob(job: Job<AnalysisJobData, void, string>
 
     await db.update(analyses).set({ status: 'analyzing' }).where(eq(analyses.id, analysisId));
 
-    const result = await analyzeWithAI({ meta, transcription, frameAnalysis });
+    const result = await analyzeWithAI({ meta, transcription, frameAnalysis, language });
     const processingTimeMs = Date.now() - startTime;
 
     await db

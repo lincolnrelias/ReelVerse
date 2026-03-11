@@ -46,7 +46,7 @@ export async function analysisRoutes(
         message: 'URL deve ser um YouTube Short válido (youtube.com/shorts/... ou youtu.be/...)',
       });
     }
-    const { videoUrl } = parsed.data;
+    const { videoUrl, language } = parsed.data;
 
     const [row] = await db
       .insert(analyses)
@@ -65,7 +65,7 @@ export async function analysisRoutes(
 
     await analysisQueue.add(
       'analyze' as const,
-      { analysisId: row.id, videoUrl }
+      { analysisId: row.id, videoUrl, language: language as 'pt' | 'en' }
     );
 
     return reply.status(201).send({

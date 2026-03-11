@@ -39,15 +39,15 @@ REGRAS DE REPLICAÇÃO:
 - templateScript deve ser um roteiro COMPLETO, frase a frase, escrito do zero utilizando o LINGUAJAR EXATO e os mesmos atalhos mentais do nicho estudado.
 - keyTakeaways devem ser os padrões psicológicos e visuais replicáveis para capturar a DESSE público.
 
-Responda SEMPRE em português brasileiro.
 Retorne APENAS o JSON, sem nenhum texto antes ou depois.`;
 
 export function buildAnalysisPrompt(params: {
   meta: VideoMeta;
   transcription: TranscriptionData;
   frameAnalysis: FrameAnalysisData;
+  language?: 'pt' | 'en';
 }): string {
-  const { meta, transcription, frameAnalysis } = params;
+  const { meta, transcription, frameAnalysis, language = 'en' } = params;
 
   return `Analise o seguinte YouTube Short e retorne o JSON de engenharia reversa:
 
@@ -135,5 +135,9 @@ Retorne o JSON seguindo EXATAMENTE este schema TypeScript (sem campos extras, se
   audio: { hasMusic: boolean, musicMood: string | null, hasVoiceover: boolean, voiceoverStyle: string | null, soundEffects: string[], audioVideoSync: string },
   cta: { hasCta: boolean, type: string | null, placement: string | null, text: string | null, effectiveness: string },
   replication: { summary: string, keyTakeaways: string[], templateScript: string, whatToAvoid: string[] }
-}`;
+}
+
+IMPORTANT LANGUAGE RULE (CRITICAL):
+${language === 'pt' ? 'Responda SEMPRE em Português Brasileiro (pt-BR).' : 'Answer ALWAYS in English (en). Do not use Portuguese.'}
+Retorne APENAS o JSON, sem nenhum texto antes ou depois.`;
 }

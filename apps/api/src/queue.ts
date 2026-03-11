@@ -9,7 +9,7 @@ const connection = {
   password: redisUrl.password || undefined,
 };
 
-export const analysisQueue = new Queue<{ analysisId: string; videoUrl: string }>(
+export const analysisQueue = new Queue<{ analysisId: string; videoUrl: string; language?: 'pt' | 'en' }>(
   'analysis',
   {
     connection,

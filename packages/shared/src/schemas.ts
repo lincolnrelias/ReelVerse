@@ -9,6 +9,7 @@ export const createAnalysisSchema = z.object({
     .string()
     .url()
     .regex(youtubeShortRegex, 'URL deve ser um YouTube Short válido'),
+  language: z.enum(['en', 'pt']).default('en').optional(),
 });
 
 export type CreateAnalysisSchema = z.infer<typeof createAnalysisSchema>;

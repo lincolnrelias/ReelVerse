@@ -8,6 +8,7 @@ export async function analyzeWithAI(params: {
   meta: VideoMeta;
   transcription: TranscriptionData;
   frameAnalysis: FrameAnalysisData;
+  language?: 'pt' | 'en';
 }): Promise<AnalysisResult> {
   const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
   const prompt = buildAnalysisPrompt(params);
