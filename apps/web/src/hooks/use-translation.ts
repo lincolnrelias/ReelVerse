@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { en } from '@/dictionaries/en';
@@ -35,6 +36,8 @@ interface TranslationState {
   setLanguage: (lang: Language) => void;
   _hasHydrated: boolean;
   setHasHydrated: (state: boolean) => void;
+  isAutoDetectionDone: boolean;
+  setAutoDetectionDone: (state: boolean) => void;
 }
 
 export const useTranslationStore = create<TranslationState>()(
@@ -44,28 +47,39 @@ export const useTranslationStore = create<TranslationState>()(
       setLanguage: (lang) => set({ language: lang }),
       _hasHydrated: false,
       setHasHydrated: (state) => set({ _hasHydrated: state }),
+      isAutoDetectionDone: false,
+      setAutoDetectionDone: (state) => set({ isAutoDetectionDone: state }),
     }),
     {
       name: 'reelverse-language',
       onRehydrateStorage: () => (state) => {
-        if (state) {
-          state.setHasHydrated(true);
-          // If no language was persisted, detect it
-          const storage = localStorage.getItem('reelverse-language');
-          if (!storage || !JSON.parse(storage).state?.language) {
-            state.setLanguage(detectLanguage());
-          }
-        }
+        state?.setHasHydrated(true);
       },
     }
   )
 );
 
 export function useTranslation() {
-  const { language, setLanguage, _hasHydrated } = useTranslationStore();
+  const { 
+    language, 
+    setLanguage, 
+    _hasHydrated, 
+    isAutoDetectionDone, 
+    setAutoDetectionDone 
+  } = useTranslationStore();
   
+  useEffect(() => {
+    if (_hasHydrated && !isAutoDetectionDone) {
+      const detected = detectLanguage();
+      
+      if (detected !== language) {
+        setLanguage(detected);
+      }
+      setAutoDetectionDone(true);
+    }
+  }, [_hasHydrated, isAutoDetectionDone, language, setLanguage, setAutoDetectionDone]);
+
   // Use a default dictionary during hydration to prevent mismatches
-  // Once hydrated, it will use the correct detected or persisted language
   const t = _hasHydrated ? dictionaries[language] : dictionaries[DEFAULT_LANGUAGE];
 
   return { t, language, setLanguage, isReady: _hasHydrated };
