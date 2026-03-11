@@ -2,6 +2,7 @@
 
 import { Zap, Lightbulb } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return '#00F5D4';
@@ -10,12 +11,8 @@ function getScoreColor(score: number): string {
   return '#FF6B6B';
 }
 
-interface HookAnalysisProps {
-  hook: AnalysisResult['hook'];
-  score: number;
-}
-
-export function HookAnalysis({ hook, score }: HookAnalysisProps) {
+export function HookAnalysis({ hook, score }: { hook: AnalysisResult['hook']; score: number }) {
+  const { t } = useTranslation();
   const color = getScoreColor(score);
   const remaining = 100 - score;
 
@@ -26,14 +23,13 @@ export function HookAnalysis({ hook, score }: HookAnalysisProps) {
         <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-transparent" />
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-primary" />
-            <h3 className="text-base font-display font-bold">Hook</h3>
+            <h3 className="text-base font-display font-bold flex items-center gap-2">
+              <span className="text-xl">🎣</span> {t.deepDive.hook.title}
+            </h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-display font-bold" style={{ color }}>{score}</span>
-            {remaining > 0 && (
-              <span className="text-[10px] text-text-secondary/50">faltam {remaining}</span>
-            )}
+            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">-{remaining} pts</span>}
           </div>
         </div>
       </div>

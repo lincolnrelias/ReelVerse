@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import type { AnalysisResult, VideoMeta } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
-function getVerdict(score: number) {
-  if (score >= 85) return { emoji: '🔥', text: 'Viral em potencial!', color: '#00F5D4' };
-  if (score >= 70) return { emoji: '💪', text: 'Bom, mas dá pra elevar o nível', color: '#A29BFE' };
-  if (score >= 50) return { emoji: '⚡', text: 'Tem base, precisa de ajustes', color: '#FFD93D' };
-  if (score >= 30) return { emoji: '🎯', text: 'Precisa de atenção', color: '#FF8EB3' };
-  return { emoji: '🔧', text: 'Hora de reformular', color: '#FF6B6B' };
+function getVerdict(score: number, t: any) {
+  if (score >= 85) return { emoji: '🔥', text: t.verdict.viral, color: '#00F5D4' };
+  if (score >= 70) return { emoji: '💪', text: t.verdict.good, color: '#A29BFE' };
+  if (score >= 50) return { emoji: '⚡', text: t.verdict.base, color: '#FFD93D' };
+  if (score >= 30) return { emoji: '🎯', text: t.verdict.attention, color: '#FF8EB3' };
+  return { emoji: '🔧', text: t.verdict.rework, color: '#FF6B6B' };
 }
 
 function getScoreColor(score: number): string {
@@ -25,8 +26,9 @@ interface VerdictHeroProps {
 }
 
 export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHeroProps) {
+  const { t } = useTranslation();
   const [displayScore, setDisplayScore] = useState(0);
-  const verdict = getVerdict(result.overallScore);
+  const verdict = getVerdict(result.overallScore, t);
   const color = getScoreColor(result.overallScore);
   const radius = 58;
   const circumference = 2 * Math.PI * radius;
@@ -117,7 +119,7 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
 
             {processingTimeMs != null && (
               <p className="text-[10px] text-text-secondary/60 mt-2">
-                Analisado em {(processingTimeMs / 1000).toFixed(1)}s
+                {t.verdict.analyzedIn} {(processingTimeMs / 1000).toFixed(1)}s
               </p>
             )}
           </div>

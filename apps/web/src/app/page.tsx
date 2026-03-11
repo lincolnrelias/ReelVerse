@@ -5,9 +5,12 @@ import { Sparkles, BarChart3, Clock, Zap, Target, Repeat, Play, TrendingUp, Chev
 import { UrlInput } from '@/components/url-input';
 import { createAnalysis } from '@/lib/api';
 import { motion, Variants } from 'framer-motion';
+import { useTranslation } from '@/hooks/use-translation';
+import { LanguageSwitcher } from '@/components/language-switcher';
 
 export default function HomePage() {
   const router = useRouter();
+  const { t } = useTranslation();
 
   async function handleSubmit(videoUrl: string, cachedAnalysisId?: string) {
     if (cachedAnalysisId) {
@@ -34,8 +37,9 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl font-display font-bold text-text-primary">ReelVerse</span>
-            <span className="tag tag-primary text-[10px]">Beta</span>
+            <span className="tag tag-primary text-[10px]">{t.common.beta}</span>
           </div>
+          <LanguageSwitcher />
         </div>
       </nav>
 
@@ -52,20 +56,19 @@ export default function HomePage() {
           <motion.div variants={FADE_UP}>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.08] text-xs font-medium text-text-secondary mb-2 sm:mb-4 shadow-lg">
               <Sparkles className="w-3.5 h-3.5 text-primary" />
-              <span>Engenharia reversa de vídeos curtos guiada por IA</span>
+              <span>{t.home.pill}</span>
             </div>
           </motion.div>
           
           <motion.h1 variants={FADE_UP} className="text-5xl sm:text-7xl font-display font-bold text-text-primary tracking-tight leading-[1.05]">
-            Descubra a anatomia do <br className="hidden sm:block" />
+            {t.home.titleLine1} <br className="hidden sm:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-neon">
-              próximo vídeo viral.
+              {t.home.titleLine2}
             </span>
           </motion.h1>
           
           <motion.p variants={FADE_UP} className="text-base sm:text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed px-2">
-            Cole um link do YouTube Shorts e receba instantaneamente os padrões de hook, copy, 
-            retenção e storytelling que fazem o vídeo funcionar. 
+            {t.home.subtitle}
           </motion.p>
 
           <motion.div variants={FADE_UP} className="max-w-2xl mx-auto mt-8 sm:mt-10 p-2 rounded-2xl sm:rounded-3xl bg-white/[0.02] border border-white/[0.08] backdrop-blur-xl shadow-2xl relative">
@@ -74,7 +77,7 @@ export default function HomePage() {
             <UrlInput onSubmit={handleSubmit} />
             <div className="p-2 sm:p-3 flex flex-wrap items-center justify-center gap-2 mt-1">
               <span className="text-[10px] sm:text-xs text-text-secondary/60">
-                Teste com: https://www.youtube.com/shorts/VIDEO_ID
+                {t.home.urlInputHint}
               </span>
             </div>
           </motion.div>
@@ -87,8 +90,8 @@ export default function HomePage() {
         
         <div className="max-w-6xl mx-auto px-5 relative z-10">
           <div className="text-center mb-12 sm:mb-20">
-            <h2 className="text-3xl sm:text-4xl font-display font-bold text-text-primary mb-4">Tudo que você precisa para viralizar</h2>
-            <p className="text-text-secondary max-w-xl mx-auto text-sm sm:text-base">Transforme visualizações em uma ciência replicável. A intuição dá lugar aos dados extraídos de cada frame.</p>
+            <h2 className="text-3xl sm:text-4xl font-display font-bold text-text-primary mb-4">{t.home.bentoTitle}</h2>
+            <p className="text-text-secondary max-w-xl mx-auto text-sm sm:text-base">{t.home.bentoSubtitle}</p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:auto-rows-[260px]">
@@ -99,8 +102,8 @@ export default function HomePage() {
                   <BarChart3 className="w-6 h-6 text-primary" />
                 </div>
                 <div className="mt-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">Desconstrução 6D</h3>
-                  <p className="text-sm text-text-secondary leading-relaxed max-w-md">Hooks, Narrativa, Copy, Edição, Áudio e CTA analisados em profundidade com inteligência artificial treinada em conteúdos que estouraram bolhas.</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">{t.home.bento1Title}</h3>
+                  <p className="text-sm text-text-secondary leading-relaxed max-w-md">{t.home.bento1Desc}</p>
                 </div>
               </div>
             </div>
@@ -112,8 +115,8 @@ export default function HomePage() {
                   <Target className="w-6 h-6 text-neon" />
                 </div>
                 <div className="mt-8">
-                  <h3 className="text-lg font-bold text-text-primary mb-2">Roteiro de Ação</h3>
-                  <p className="text-sm text-text-secondary leading-relaxed">Ações diretas mostrando exatamente o que mudar para elevar o seu score.</p>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">{t.home.bento2Title}</h3>
+                  <p className="text-sm text-text-secondary leading-relaxed">{t.home.bento2Desc}</p>
                 </div>
               </div>
             </div>
@@ -125,8 +128,8 @@ export default function HomePage() {
                   <Repeat className="w-6 h-6 text-accent" />
                 </div>
                 <div className="mt-8">
-                  <h3 className="text-lg font-bold text-text-primary mb-2">Playbook Replicável</h3>
-                  <p className="text-sm text-text-secondary leading-relaxed">Extraímos padrões vencedores e geramos um roteiro-base para o seu nicho.</p>
+                  <h3 className="text-lg font-bold text-text-primary mb-2">{t.home.bento3Title}</h3>
+                  <p className="text-sm text-text-secondary leading-relaxed">{t.home.bento3Desc}</p>
                 </div>
               </div>
             </div>
@@ -145,8 +148,8 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="mt-8">
-                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">Ritmo e Timestamps Precisos</h3>
-                  <p className="text-sm text-text-secondary leading-relaxed max-w-md">Identifique os padrões de corte segundo a segundo e entenda exatamente onde ocorrem as quebras narrativas responsáveis pela retenção massiva do público.</p>
+                  <h3 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">{t.home.bento4Title}</h3>
+                  <p className="text-sm text-text-secondary leading-relaxed max-w-md">{t.home.bento4Desc}</p>
                 </div>
               </div>
             </div>
@@ -155,15 +158,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
       <footer className="relative z-10 py-8 sm:py-12 border-t border-white/[0.04] bg-background">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-[10px] sm:text-xs text-text-secondary/60">
-            © 2026 ReelVerse. Todos os direitos reservados.
+            {t.common.rightsReserved}
           </p>
           <div className="flex gap-4 text-[10px] sm:text-xs text-text-secondary/60 font-medium tracking-wide">
-            <span className="hover:text-primary transition-colors cursor-pointer uppercase">Termos</span>
-            <span className="hover:text-primary transition-colors cursor-pointer uppercase">Privacidade</span>
+            <span className="hover:text-primary transition-colors cursor-pointer uppercase">{t.common.terms}</span>
+            <span className="hover:text-primary transition-colors cursor-pointer uppercase">{t.common.privacy}</span>
           </div>
         </div>
       </footer>

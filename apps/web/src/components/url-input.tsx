@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { youtubeShortRegex } from '@reelverse/shared';
 import { Loader2 } from 'lucide-react';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface UrlInputProps {
   onSubmit: (videoUrl: string, cachedAnalysisId?: string) => Promise<void>;
@@ -16,6 +17,7 @@ export function UrlInput({ onSubmit, disabled }: UrlInputProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const { t, language } = useTranslation();
 
   const isWorking = loading || isNavigating;
   const valid = url.trim() !== '' && youtubeShortRegex.test(url.trim());
@@ -25,7 +27,7 @@ export function UrlInput({ onSubmit, disabled }: UrlInputProps) {
     setError(null);
     const trimmed = url.trim();
     if (!youtubeShortRegex.test(trimmed)) {
-      setError('URL deve ser um YouTube Short (youtube.com/shorts/... ou youtu.be/...)');
+      setError(t.home.urlInputError);
       return;
     }
     setLoading(true);
@@ -37,8 +39,13 @@ export function UrlInput({ onSubmit, disabled }: UrlInputProps) {
         await onSubmit(trimmed, cached.analysisId);
         return;
       }
+      
+      // Update the URL locally calling the api
+      const { createAnalysis } = await import('@/lib/api');
+      const { id } = await createAnalysis({ videoUrl: trimmed, language });
+      
       setIsNavigating(true);
-      await onSubmit(trimmed);
+      await onSubmit(trimmed, id);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao criar análise.');
       setLoading(false);
@@ -51,7 +58,7 @@ export function UrlInput({ onSubmit, disabled }: UrlInputProps) {
       <div className="flex flex-col sm:flex-row gap-3">
         <Input
           type="url"
-          placeholder="https://www.youtube.com/shorts/..."
+          placeholder={t.home.urlInputPlaceholder}
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           disabled={disabled || isWorking}
@@ -67,10 +74,10 @@ export function UrlInput({ onSubmit, disabled }: UrlInputProps) {
           {isWorking ? (
             <span className="flex items-center gap-2">
               <Loader2 className="w-5 h-5 animate-spin" />
-              {isNavigating ? 'Redirecionando...' : 'Analisando...'}
+              {isNavigating ? t.home.urlInputButtonRedirecting : t.home.urlInputButtonLoading}
             </span>
           ) : (
-            'Analisar Vídeo'
+            t.home.urlInputButtonDefault
           )}
         </Button>
       </div>

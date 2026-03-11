@@ -143,4 +143,5 @@ export interface AnalysisStatus {
 // Input validation
 export interface CreateAnalysisInput {
   videoUrl: string;
+  language?: 'pt' | 'en';
 }

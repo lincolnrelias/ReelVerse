@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { Check, AlertTriangle, Copy, Repeat } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 export function ReplicationCard({ replication }: { replication: AnalysisResult['replication'] }) {
   const [copied, setCopied] = useState(false);
+  const { t } = useTranslation();
 
   const handleCopy = async () => {
     try {
@@ -23,7 +25,7 @@ export function ReplicationCard({ replication }: { replication: AnalysisResult['
       <div className="p-6 space-y-6">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🧬</span>
-          <h2 className="text-xl font-display font-bold text-text-primary">Playbook de Replicação</h2>
+          <h2 className="text-xl font-display font-bold text-text-primary">{t.replication.title}</h2>
         </div>
 
         <p className="text-sm text-text-secondary leading-relaxed break-words">{replication.summary}</p>
@@ -31,7 +33,7 @@ export function ReplicationCard({ replication }: { replication: AnalysisResult['
         {/* Takeaways */}
         <div>
           <h4 className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.15em] mb-3">
-            Padrões replicáveis
+            {t.replication.patterns}
           </h4>
           <div className="space-y-2">
             {replication.keyTakeaways.map((item, i) => (
@@ -49,14 +51,14 @@ export function ReplicationCard({ replication }: { replication: AnalysisResult['
         <div>
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.15em]">
-              Script modelo
+              {t.replication.script}
             </h4>
             <button
               onClick={handleCopy}
               className="flex items-center gap-1.5 text-[10px] text-text-secondary hover:text-primary transition-colors px-2.5 py-1 rounded-lg hover:bg-white/5 border border-white/[0.06]"
             >
               <Copy className="w-3 h-3" />
-              {copied ? 'Copiado!' : 'Copiar'}
+              {copied ? t.replication.copied : t.replication.copy}
             </button>
           </div>
           <div className="relative rounded-xl bg-background border border-white/[0.06] overflow-hidden">
@@ -70,7 +72,7 @@ export function ReplicationCard({ replication }: { replication: AnalysisResult['
         {/* What to avoid */}
         <div>
           <h4 className="text-[10px] font-semibold text-text-secondary uppercase tracking-[0.15em] mb-3">
-            O que evitar
+            {t.replication.avoid}
           </h4>
           <div className="space-y-2">
             {replication.whatToAvoid.map((item, i) => (

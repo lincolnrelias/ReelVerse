@@ -2,20 +2,21 @@
 
 import { Zap, ArrowRight, ChevronRight } from 'lucide-react';
 import type { AnalysisResult, Improvement } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
-function getEffortConfig(effort: Improvement['effort']) {
+function getEffortConfig(effort: Improvement['effort'], t: any) {
   switch (effort) {
-    case 'fácil': return { label: 'Fácil', emoji: '🟢', className: 'effort-easy' };
-    case 'moderado': return { label: 'Moderado', emoji: '🟡', className: 'effort-moderate' };
-    case 'avançado': return { label: 'Avançado', emoji: '🔴', className: 'effort-advanced' };
+    case 'fácil': return { label: t.roadmap.easy, emoji: '🟢', className: 'effort-easy' };
+    case 'moderado': return { label: t.roadmap.moderate, emoji: '🟡', className: 'effort-moderate' };
+    case 'avançado': return { label: t.roadmap.advanced, emoji: '🔴', className: 'effort-advanced' };
   }
 }
 
-function getImpactConfig(impact: Improvement['impact']) {
+function getImpactConfig(impact: Improvement['impact'], t: any) {
   switch (impact) {
-    case 'alto': return { label: 'Alto impacto', color: '#00F5D4' };
-    case 'médio': return { label: 'Médio impacto', color: '#FFD93D' };
-    case 'baixo': return { label: 'Baixo impacto', color: '#A29BFE' };
+    case 'alto': return { label: t.roadmap.highImpact, color: '#00F5D4' };
+    case 'médio': return { label: t.roadmap.mediumImpact, color: '#FFD93D' };
+    case 'baixo': return { label: t.roadmap.lowImpact, color: '#A29BFE' };
   }
 }
 
@@ -35,6 +36,7 @@ function getScoreColor(score: number): string {
 }
 
 export function ImprovementRoadmap({ result }: { result: AnalysisResult }) {
+  const { t } = useTranslation();
   const improvements = result.improvements ?? [];
 
   if (improvements.length === 0) return null;
@@ -43,14 +45,14 @@ export function ImprovementRoadmap({ result }: { result: AnalysisResult }) {
     <section className="animate-fade-in-up delay-2">
       <div className="flex items-center gap-3 mb-5">
         <span className="text-2xl">🎯</span>
-        <h2 className="text-xl font-display font-bold text-text-primary">Próximos Passos</h2>
-        <span className="tag tag-accent text-[10px]">{improvements.length} melhorias</span>
+        <h2 className="text-xl font-display font-bold text-text-primary">{t.roadmap.title}</h2>
+        <span className="tag tag-accent text-[10px]">{improvements.length} {t.roadmap.improvements}</span>
       </div>
 
       <div className="space-y-3">
         {improvements.map((imp, i) => {
-          const effort = getEffortConfig(imp.effort);
-          const impact = getImpactConfig(imp.impact);
+          const effort = getEffortConfig(imp.effort, t);
+          const impact = getImpactConfig(imp.impact, t);
           const currentColor = getScoreColor(imp.currentScore);
           const projectedColor = getScoreColor(imp.projectedScore);
           const sectionId = `section-${imp.dimension}`;
@@ -124,7 +126,7 @@ export function ImprovementRoadmap({ result }: { result: AnalysisResult }) {
               {/* Click hint */}
               <div className="flex items-center justify-end mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <span className="text-[10px] text-primary flex items-center gap-0.5">
-                  Ver análise completa <ChevronRight className="w-3 h-3" />
+                  {t.roadmap.viewFull} <ChevronRight className="w-3 h-3" />
                 </span>
               </div>
             </button>

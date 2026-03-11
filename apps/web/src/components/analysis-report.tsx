@@ -12,6 +12,7 @@ import { AudioAnalysis } from './audio-analysis';
 import { CtaAnalysis } from './cta-analysis';
 import { NarrativeTimeline } from './narrative-timeline';
 import { ReplicationCard } from './replication-card';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface AnalysisReportProps {
   result: AnalysisResult;
@@ -20,6 +21,7 @@ interface AnalysisReportProps {
 }
 
 export function AnalysisReport({ result, videoMeta, processingTimeMs }: AnalysisReportProps) {
+  const { t } = useTranslation();
   return (
     <div className="space-y-10 max-w-4xl mx-auto">
       {/* 1. Immediate value — how's the video? */}
@@ -38,7 +40,7 @@ export function AnalysisReport({ result, videoMeta, processingTimeMs }: Analysis
       <section className="space-y-4 animate-fade-in-up delay-5">
         <div className="flex items-center gap-3 mb-2">
           <span className="text-2xl">🔬</span>
-          <h2 className="text-xl font-display font-bold text-text-primary">Análise Detalhada</h2>
+          <h2 className="text-xl font-display font-bold text-text-primary">{t.report.detailedAnalysis}</h2>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">

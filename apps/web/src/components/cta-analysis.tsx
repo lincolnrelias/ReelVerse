@@ -2,6 +2,7 @@
 
 import { Megaphone, MapPin } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return '#00F5D4';
@@ -16,6 +17,7 @@ interface CtaAnalysisProps {
 }
 
 export function CtaAnalysis({ cta, score }: CtaAnalysisProps) {
+  const { t } = useTranslation();
   const color = getScoreColor(score);
   const remaining = 100 - score;
 
@@ -26,11 +28,11 @@ export function CtaAnalysis({ cta, score }: CtaAnalysisProps) {
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Megaphone className="w-4 h-4 text-error" />
-            <h3 className="text-base font-display font-bold">CTA</h3>
+            <h3 className="text-base font-display font-bold">{t.deepDive.cta.title}</h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-display font-bold" style={{ color }}>{score}</span>
-            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">faltam {remaining}</span>}
+            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">-{remaining} pts</span>}
           </div>
         </div>
       </div>
@@ -40,9 +42,11 @@ export function CtaAnalysis({ cta, score }: CtaAnalysisProps) {
           <span className={`w-8 h-8 flex-shrink-0 mt-0.5 rounded-full flex items-center justify-center text-sm font-bold ${cta.hasCta ? 'bg-neon/15 text-neon' : 'bg-error/15 text-error'}`}>
             {cta.hasCta ? '✓' : '✗'}
           </span>
-          <span className="text-sm text-text-primary font-medium mt-1">
-            {cta.hasCta ? 'CTA presente no vídeo' : 'Sem CTA identificado'}
-          </span>
+          {cta.hasCta === false && (
+            <span className="text-sm text-text-primary font-medium mt-1">
+              {t.deepDive.cta.missing}
+            </span>
+          )}
         </div>
 
         {cta.hasCta && (
@@ -55,7 +59,7 @@ export function CtaAnalysis({ cta, score }: CtaAnalysisProps) {
             )}
             {cta.placement && (
               <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3">
-                <span className="text-[10px] text-text-secondary uppercase tracking-wider block mb-1.5">Posição</span>
+                <span className="text-[10px] text-text-secondary uppercase tracking-wider block mb-1.5">{t.deepDive.cta.where}</span>
                 <div className="flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-text-secondary/50" />
                   <span className="text-xs text-text-primary">{cta.placement}</span>

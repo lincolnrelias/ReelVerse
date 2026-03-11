@@ -2,6 +2,7 @@
 
 import { Check } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface DimensionInfo {
   key: string;
@@ -20,6 +21,7 @@ const DIMENSIONS: DimensionInfo[] = [
 ];
 
 export function StrengthsSection({ result }: { result: AnalysisResult }) {
+  const { t } = useTranslation();
   const sorted = [...DIMENSIONS]
     .map((d) => ({ ...d, score: result[d.scoreKey] as number }))
     .sort((a, b) => b.score - a.score)
@@ -29,7 +31,7 @@ export function StrengthsSection({ result }: { result: AnalysisResult }) {
     <section className="animate-fade-in-up delay-3">
       <div className="flex items-center gap-3 mb-5">
         <span className="text-2xl">🔥</span>
-        <h2 className="text-xl font-display font-bold text-text-primary">Pontos Fortes</h2>
+        <h2 className="text-xl font-display font-bold text-text-primary">{t.strengths.title}</h2>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">

@@ -2,6 +2,7 @@
 
 import { Film, Scissors, Sparkles } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return '#00F5D4';
@@ -10,12 +11,8 @@ function getScoreColor(score: number): string {
   return '#FF6B6B';
 }
 
-interface EditingAnalysisProps {
-  editing: AnalysisResult['editing'];
-  score: number;
-}
-
-export function EditingAnalysis({ editing, score }: EditingAnalysisProps) {
+export function EditingAnalysis({ editing, score }: { editing: AnalysisResult['editing']; score: number }) {
+  const { t } = useTranslation();
   const color = getScoreColor(score);
   const remaining = 100 - score;
 
@@ -26,53 +23,67 @@ export function EditingAnalysis({ editing, score }: EditingAnalysisProps) {
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Film className="w-4 h-4 text-neon" />
-            <h3 className="text-base font-display font-bold">Edição & Ritmo</h3>
+            <h3 className="text-lg font-bold text-text-primary flex items-center gap-2">
+              <span className="text-xl">✂️</span> {t.deepDive.editing.title}
+            </h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-display font-bold" style={{ color }}>{score}</span>
-            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">faltam {remaining}</span>}
+            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">-{remaining} pts</span>}
           </div>
         </div>
       </div>
 
       <div className="p-5 space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3 text-center">
-            <Scissors className="w-4 h-4 text-text-secondary/60 mx-auto mb-1" />
-            <p className="text-xl font-display font-bold text-text-primary">{editing.totalCuts}</p>
-            <p className="text-[10px] text-text-secondary uppercase tracking-wider">Cortes</p>
-          </div>
-          <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3 text-center">
-            <p className="text-xl font-display font-bold text-text-primary mt-5">{editing.avgCutDuration.toFixed(1)}s</p>
-            <p className="text-[10px] text-text-secondary uppercase tracking-wider">Média/corte</p>
-          </div>
-          <div className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-3 text-center flex flex-col items-center justify-center">
-            <span className="tag tag-primary text-[10px] mb-1">{editing.pacing}</span>
-            <p className="text-[10px] text-text-secondary uppercase tracking-wider">Ritmo</p>
-          </div>
-        </div>
+        <div className="space-y-5 flex-1">
+          {editing.standoutTechnique && (
+            <div className="p-4 rounded-xl bg-neon/5 border border-neon/10 text-sm">
+              <span className="font-semibold text-neon mr-1">Técnica Destaque:</span>
+              <span className="text-text-secondary">{editing.standoutTechnique}</span>
+            </div>
+          )}
 
-        {editing.transitionTypes.length > 0 && (
-          <div>
-            <span className="text-[10px] text-text-secondary uppercase tracking-wider block mb-2">Transições</span>
-            <div className="flex flex-wrap gap-1.5">
-              {editing.transitionTypes.map((t, i) => <span key={i} className="tag">{t}</span>)}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-1">{t.deepDive.editing.totalCuts}</p>
+              <p className="text-xl font-display font-bold text-text-primary">{editing.totalCuts}</p>
+            </div>
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.04]">
+              <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-1">{t.deepDive.editing.avgDuration}</p>
+              <p className="text-xl font-display font-bold text-text-primary">{editing.avgCutDuration.toFixed(1)}s</p>
             </div>
           </div>
-        )}
 
-        {editing.visualEffects.length > 0 && (
-          <div>
-            <span className="text-[10px] text-text-secondary uppercase tracking-wider block mb-2">Efeitos</span>
-            <div className="flex flex-wrap gap-1.5">
-              {editing.visualEffects.map((e, i) => <span key={i} className="tag">{e}</span>)}
+          {editing.transitionTypes.length > 0 && (
+            <div>
+              <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-2">{t.deepDive.editing.transitions}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {editing.transitionTypes.map((tItem, i) => (
+                <span key={i} className="tag">
+                  {tItem}
+                </span>
+              ))}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        <div className="flex items-start gap-2 rounded-xl bg-neon/[0.06] border border-neon/15 p-3">
-          <Sparkles className="w-4 h-4 text-neon mt-0.5 flex-shrink-0" />
-          <p className="text-sm text-text-primary leading-relaxed break-words flex-1 min-w-0">{editing.standoutTechnique}</p>
+          {editing.visualEffects.length > 0 && (
+            <div>
+              <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-2">{t.deepDive.editing.visuals}</p>
+              <div className="flex flex-wrap gap-1.5">
+                {editing.visualEffects.map((e, i) => (
+                <span key={i} className="tag">
+                  {e}
+                </span>
+              ))}
+              </div>
+            </div>
+          )}
+
+          <div>
+            <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-1.5">{t.deepDive.editing.pacing}</p>
+            <p className="text-sm text-text-secondary leading-relaxed">{editing.pacing}</p>
+          </div>
         </div>
       </div>
     </div>

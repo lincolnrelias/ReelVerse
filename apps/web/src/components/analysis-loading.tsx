@@ -4,22 +4,7 @@ import { useState, useEffect } from 'react';
 import type { AnalysisStatusEnum } from '@reelverse/shared';
 import type { VideoMeta } from '@reelverse/shared';
 import { Loader2 } from 'lucide-react';
-
-const STEPS: { status: AnalysisStatusEnum; label: string; emoji: string }[] = [
-  { status: 'pending', label: 'Na fila de processamento', emoji: '⏳' },
-  { status: 'extracting', label: 'Extraindo vídeo e metadados', emoji: '📥' },
-  { status: 'processing_video', label: 'Analisando cortes e frames', emoji: '🎬' },
-  { status: 'transcribing', label: 'Transcrevendo áudio com IA', emoji: '🎙️' },
-  { status: 'analyzing', label: 'Desconstruindo roteiro e hook', emoji: '🧠' },
-];
-
-const ENGAGEMENT_TEXTS = [
-  "Você sabia? Hooks visuais nos primeiros 3s aumentam a retenção em 47%.",
-  "Nossa IA está assistindo seu vídeo frame por frame...",
-  "Calculando a densidade de cortes e ritmo da edição.",
-  "Mapeando quebras de padrão no seu storytelling...",
-  "Comparando seu vídeo com milhares de virais bem-sucedidos.",
-];
+import { useTranslation } from '@/hooks/use-translation';
 
 interface AnalysisLoadingProps {
   status: AnalysisStatusEnum;
@@ -28,10 +13,27 @@ interface AnalysisLoadingProps {
 
 export function AnalysisLoading({ status, videoMeta }: AnalysisLoadingProps) {
   const [funFactIndex, setFunFactIndex] = useState(0);
+  const { t } = useTranslation();
+
+  const STEPS: { status: AnalysisStatusEnum; label: string; emoji: string }[] = [
+    { status: 'pending', label: t.loading.stepPending, emoji: '⏳' },
+    { status: 'extracting', label: t.loading.stepExtracting, emoji: '📥' },
+    { status: 'processing_video', label: t.loading.stepProcessing, emoji: '🎬' },
+    { status: 'transcribing', label: t.loading.stepTranscribing, emoji: '🎙️' },
+    { status: 'analyzing', label: t.loading.stepAnalyzing, emoji: '🧠' },
+  ];
+
+  const ENGAGEMENT_TEXTS = [
+    t.loading.funFact1,
+    t.loading.funFact2,
+    t.loading.funFact3,
+    t.loading.funFact4,
+    t.loading.funFact5,
+  ];
   
   useEffect(() => {
     const interval = setInterval(() => {
-      setFunFactIndex((prev) => (prev + 1) % ENGAGEMENT_TEXTS.length);
+      setFunFactIndex((prev) => (prev + 1) % 5);
     }, 3500);
     return () => clearInterval(interval);
   }, []);
@@ -53,7 +55,7 @@ export function AnalysisLoading({ status, videoMeta }: AnalysisLoadingProps) {
             />
           )}
           <div className="min-w-0 flex-1 flex flex-col justify-center">
-            <span className="tag tag-accent text-[10px] w-fit mb-2">Desconstruindo</span>
+            <span className="tag tag-accent text-[10px] w-fit mb-2">{t.loading.badge}</span>
             <p className="font-display font-bold text-text-primary truncate">{videoMeta.title}</p>
             <p className="text-sm text-text-secondary">{videoMeta.channelName}</p>
           </div>
@@ -127,7 +129,7 @@ export function AnalysisLoading({ status, videoMeta }: AnalysisLoadingProps) {
                   )}
                 </div>
                 <span className="flex-1 min-w-0 break-words leading-tight mt-1">{step.label}</span>
-                {active && <span className="text-[10px] uppercase font-bold text-accent animate-pulse tracking-wider flex-shrink-0">Processando</span>}
+                {active && <span className="text-[10px] uppercase font-bold text-accent animate-pulse tracking-wider flex-shrink-0">{t.loading.processing}</span>}
               </li>
             );
           })}

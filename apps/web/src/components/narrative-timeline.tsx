@@ -2,6 +2,7 @@
 
 import { Activity } from 'lucide-react';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 function getScoreColor(score: number): string {
   if (score >= 80) return '#00F5D4';
@@ -23,6 +24,7 @@ interface NarrativeTimelineProps {
 }
 
 export function NarrativeTimeline({ narrative, score }: NarrativeTimelineProps) {
+  const { t } = useTranslation();
   const phases = narrative.phases ?? [];
   const total = phases.length > 0 ? Math.max(...phases.map((p) => p.endTime)) : 0;
   const color = getScoreColor(score);
@@ -35,11 +37,11 @@ export function NarrativeTimeline({ narrative, score }: NarrativeTimelineProps) 
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Activity className="w-4 h-4 text-primary-light" />
-            <h3 className="text-base font-display font-bold">Narrativa</h3>
+            <h3 className="text-base font-display font-bold">{t.deepDive.narrative.title}</h3>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-2xl font-display font-bold" style={{ color }}>{score}</span>
-            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">faltam {remaining}</span>}
+            {remaining > 0 && <span className="text-[10px] text-text-secondary/50">-{remaining} pts</span>}
           </div>
         </div>
       </div>
@@ -90,6 +92,7 @@ export function NarrativeTimeline({ narrative, score }: NarrativeTimelineProps) 
         </div>
 
         <div className="rounded-xl bg-white/[0.02] p-3 border border-white/[0.04]">
+          <p className="text-xs text-text-secondary/60 uppercase tracking-wider mb-1.5">{t.deepDive.narrative.analysis}</p>
           <p className="text-xs text-text-secondary leading-relaxed break-words">{narrative.effectiveness}</p>
         </div>
       </div>

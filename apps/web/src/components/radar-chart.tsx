@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { AnalysisResult } from '@reelverse/shared';
+import { useTranslation } from '@/hooks/use-translation';
 
 interface RadarChartProps {
   result: AnalysisResult;
@@ -24,6 +25,7 @@ const DIMENSIONS = [
 ];
 
 export function RadarChart({ result }: RadarChartProps) {
+  const { t } = useTranslation();
   const data = DIMENSIONS.map((d) => ({
     subject: d.name,
     score: result[d.key as keyof AnalysisResult] as number,
@@ -34,7 +36,7 @@ export function RadarChart({ result }: RadarChartProps) {
     <div className="rounded-2xl bg-surface border border-white/[0.06] p-6 animate-fade-in-up delay-4">
       <div className="flex items-center gap-3 mb-4">
         <span className="text-2xl">📊</span>
-        <h2 className="text-xl font-display font-bold text-text-primary">Radar de Performance</h2>
+        <h2 className="text-xl font-display font-bold text-text-primary">{t.radar.title}</h2>
       </div>
       <div className="h-72">
         <ResponsiveContainer width="100%" height="100%">
