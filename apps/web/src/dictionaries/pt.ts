@@ -4,6 +4,7 @@ export const pt = {
     terms: 'Termos',
     privacy: 'Privacidade',
     rightsReserved: '© 2026 ReelVerse. Todos os direitos reservados.',
+    feedback: 'Deixar Feedback',
   },
   home: {
     pill: 'Engenharia reversa de vídeos curtos guiada por IA',

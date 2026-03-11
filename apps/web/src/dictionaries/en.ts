@@ -4,6 +4,7 @@ export const en = {
     terms: 'Terms',
     privacy: 'Privacy',
     rightsReserved: '© 2026 ReelVerse. All rights reserved.',
+    feedback: 'Leave Feedback',
   },
   home: {
     pill: 'AI-guided short-form video reverse engineering',
