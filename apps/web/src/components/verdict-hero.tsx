@@ -92,9 +92,9 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
 
           {/* Verdict + Summary */}
           <div className="flex-1 text-center sm:text-left min-w-0 space-y-3">
-            <div>
-              <span className="text-3xl mr-2">{verdict.emoji}</span>
-              <h1 className="inline text-2xl sm:text-3xl font-display font-bold" style={{ color: verdict.color }}>
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+              <span className="text-3xl flex-shrink-0">{verdict.emoji}</span>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold break-words" style={{ color: verdict.color }}>
                 {verdict.text}
               </h1>
             </div>
@@ -111,7 +111,7 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
                 <div className="min-w-0">
                   <p className="text-xs font-medium text-text-primary pr-2 truncate">{videoMeta.title}</p>
                   <p className="text-[10px] text-text-secondary pr-2 truncate mt-0.5">
-                    {videoMeta.channelName} • {videoMeta.duration}s • {videoMeta.viewCount.toLocaleString()} views
+                    {videoMeta.channelName} • {videoMeta.duration}s{videoMeta.viewCount ? ` • ${videoMeta.viewCount.toLocaleString()} views` : ''}
                   </p>
                 </div>
               </div>

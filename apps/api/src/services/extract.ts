@@ -72,7 +72,7 @@ export async function extractVideo(
     channelUrl: videoData.author?.endpoint?.metadata?.url ? `https://youtube.com${videoData.author.endpoint.metadata.url}` : '',
     publishDate: add.published?.text || '',
     duration: add.duration ? Number(add.duration) : 0, 
-    viewCount: parseViewCount(add.view_count?.view_count?.text || add.view_count?.original_view_count),
+    viewCount: videoData.viewCount ? Number(videoData.viewCount) : parseViewCount(add.view_count?.view_count?.text || add.view_count?.original_view_count),
     likeCount: add.like_count ? Number(add.like_count) : 0,
     commentCount: 0,
     hashtags: extractHashtags(add.short_description || videoData.title || ''),
