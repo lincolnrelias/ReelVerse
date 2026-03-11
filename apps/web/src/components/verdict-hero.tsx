@@ -52,7 +52,7 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
   }, [result.overallScore]);
 
   return (
-    <section className="relative rounded-3xl overflow-hidden animate-fade-in-up">
+    <section className="relative rounded-3xl overflow-hidden animate-fade-in-up w-full max-w-full">
       {/* Gradient mesh background */}
       <div className="absolute inset-0 bg-gradient-mesh opacity-60" />
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-background/80" />
@@ -63,54 +63,54 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
       {/* Gradient border */}
       <div className="absolute inset-0 gradient-border rounded-3xl" />
 
-      <div className="relative z-10 p-8 sm:p-10">
-        <div className="flex flex-col sm:flex-row items-center gap-8">
+      <div className="relative z-10 p-6 sm:p-10 w-full overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[160px_1fr] gap-8 items-center justify-items-center md:justify-items-start w-full">
           {/* Score Ring */}
-          <div className="relative flex-shrink-0">
-            <div className="relative w-40 h-40">
-              {/* Glow behind ring */}
-              <div className="absolute inset-2 rounded-full animate-glow-pulse" style={{ boxShadow: `0 0 40px 8px ${color}20` }} />
-              
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
-                <circle cx="64" cy="64" r={radius} fill="none" className="score-ring-bg" strokeWidth="8" />
-                <circle
-                  cx="64" cy="64" r={radius}
-                  fill="none" stroke={color} strokeWidth="8"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  className="transition-all duration-100"
-                  style={{ filter: `drop-shadow(0 0 6px ${color}60)` }}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-5xl font-display font-bold tracking-tight" style={{ color }}>{displayScore}</span>
-                <span className="text-[10px] text-text-secondary uppercase tracking-[0.2em] mt-0.5">score</span>
-              </div>
+          <div className="relative w-40 h-40 flex-shrink-0">
+            {/* Glow behind ring */}
+            <div className="absolute inset-2 rounded-full animate-glow-pulse" style={{ boxShadow: `0 0 40px 8px ${color}20` }} />
+            
+            <svg className="w-full h-full -rotate-90" viewBox="0 0 128 128">
+              <circle cx="64" cy="64" r={radius} fill="none" className="score-ring-bg" strokeWidth="8" />
+              <circle
+                cx="64" cy="64" r={radius}
+                fill="none" stroke={color} strokeWidth="8"
+                strokeDasharray={circumference}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="round"
+                className="transition-all duration-100"
+                style={{ filter: `drop-shadow(0 0 6px ${color}60)` }}
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-5xl font-display font-bold tracking-tight" style={{ color }}>{displayScore}</span>
+              <span className="text-[10px] text-text-secondary uppercase tracking-[0.2em] mt-0.5">score</span>
             </div>
           </div>
 
           {/* Verdict + Summary */}
-          <div className="flex-1 text-center sm:text-left min-w-0 space-y-3">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 min-w-0">
-              <span className="text-3xl flex-shrink-0">{verdict.emoji}</span>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold break-words min-w-0 flex-1" style={{ color: verdict.color }}>
+          <div className="w-full min-w-0 flex flex-col items-center md:items-start text-center md:text-left space-y-4">
+            <div className="flex flex-col sm:flex-row items-center justify-center md:justify-start gap-2 sm:gap-3 w-full max-w-full">
+              <span className="text-4xl sm:text-3xl flex-shrink-0">{verdict.emoji}</span>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-wrap break-words min-w-0 w-full" style={{ color: verdict.color }}>
                 {verdict.text}
               </h1>
             </div>
 
-            <p className="text-text-secondary text-sm sm:text-base leading-relaxed max-w-lg">
+            <p className="text-text-secondary text-sm sm:text-base leading-relaxed text-wrap break-words min-w-0 w-full max-w-lg">
               {result.verdictSummary}
             </p>
 
             {videoMeta && (
-              <div className="flex text-left items-center gap-3 rounded-2xl glass p-3 mt-4 w-full sm:max-w-md">
+              <div className="flex text-left items-center gap-3 rounded-2xl glass p-3 mt-2 w-full max-w-full sm:max-w-sm overflow-hidden">
                 {videoMeta.thumbnailUrl && (
-                  <img src={videoMeta.thumbnailUrl} alt="" className="w-14 h-9 rounded-lg object-cover flex-shrink-0" />
+                  <img src={videoMeta.thumbnailUrl} alt="" className="w-16 h-10 sm:w-14 sm:h-9 rounded-lg object-cover flex-shrink-0" />
                 )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium text-text-primary pr-2 truncate">{videoMeta.title || 'Vídeo sem título'}</p>
-                  <p className="text-[10px] text-text-secondary pr-2 truncate mt-0.5">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p className="text-xs font-medium text-text-primary pr-2 truncate block w-full">
+                    {videoMeta.title || 'Vídeo sem título'}
+                  </p>
+                  <p className="text-[10px] text-text-secondary pr-2 truncate mt-0.5 block w-full">
                     {videoMeta.channelName ? `${videoMeta.channelName} • ` : ''}{videoMeta.duration}s{videoMeta.viewCount ? ` • ${videoMeta.viewCount.toLocaleString()} views` : ''}
                   </p>
                 </div>
@@ -118,7 +118,7 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
             )}
 
             {processingTimeMs != null && (
-              <p className="text-[10px] text-text-secondary/60 mt-2">
+              <p className="text-[10px] text-text-secondary/60 mt-1 block w-full">
                 {t.verdict.analyzedIn} {(processingTimeMs / 1000).toFixed(1)}s
               </p>
             )}
