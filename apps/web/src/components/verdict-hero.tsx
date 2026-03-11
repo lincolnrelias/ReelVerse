@@ -92,9 +92,9 @@ export function VerdictHero({ result, videoMeta, processingTimeMs }: VerdictHero
 
           {/* Verdict + Summary */}
           <div className="flex-1 text-center sm:text-left min-w-0 space-y-3">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 min-w-0">
               <span className="text-3xl flex-shrink-0">{verdict.emoji}</span>
-              <h1 className="text-2xl sm:text-3xl font-display font-bold break-words" style={{ color: verdict.color }}>
+              <h1 className="text-2xl sm:text-3xl font-display font-bold break-words min-w-0 flex-1" style={{ color: verdict.color }}>
                 {verdict.text}
               </h1>
             </div>
