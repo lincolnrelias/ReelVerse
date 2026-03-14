@@ -11,6 +11,7 @@ import { transcribeAudio } from '../services/transcribe.js';
 import { analyzeFrames } from '../services/frameAnalysis.js';
 import { analyzeWithAI } from '../services/analyze.js';
 import { execCommand } from '../lib/exec.js';
+import { normalizeYoutubeShortUrl } from '@reelverse/shared';
 
 const db = createDb(env.DATABASE_URL);
 
@@ -34,7 +35,8 @@ async function ensureBinaries(): Promise<void> {
 }
 
 export async function processAnalysisJob(job: Job<AnalysisJobData, void, string>): Promise<void> {
-  const { analysisId, videoUrl, language } = job.data;
+  const { analysisId, videoUrl: rawVideoUrl, language } = job.data;
+  const videoUrl = normalizeYoutubeShortUrl(rawVideoUrl);
   const tempDir = path.join(env.TEMP_DIR, analysisId);
   const startTime = Date.now();
 

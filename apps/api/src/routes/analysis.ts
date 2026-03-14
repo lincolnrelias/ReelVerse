@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify';
 import { eq, and, gte, desc } from 'drizzle-orm';
-import { createAnalysisSchema } from '@reelverse/shared';
+import { createAnalysisSchema, normalizeYoutubeShortUrl } from '@reelverse/shared';
 import type { AnalysisStatus } from '@reelverse/shared';
 import { analyses } from '../db/schema.js';
 import type { Db } from '../db/index.js';
@@ -46,7 +46,8 @@ export async function analysisRoutes(
         message: 'URL deve ser um YouTube Short válido (youtube.com/shorts/... ou youtu.be/...)',
       });
     }
-    const { videoUrl, language } = parsed.data;
+    const { videoUrl: rawUrl, language } = parsed.data;
+    const videoUrl = normalizeYoutubeShortUrl(rawUrl);
 
     const [row] = await db
       .insert(analyses)
@@ -76,8 +77,14 @@ export async function analysisRoutes(
   });
 
   app.get<{ Querystring: { videoUrl?: string } }>('/api/analysis/cache-check', async (request, reply) => {
-    const videoUrl = request.query.videoUrl;
-    if (!videoUrl || typeof videoUrl !== 'string') {
+    const rawUrl = request.query.videoUrl;
+    if (!rawUrl || typeof rawUrl !== 'string') {
+      return reply.send({ cached: false });
+    }
+    let videoUrl: string;
+    try {
+      videoUrl = normalizeYoutubeShortUrl(rawUrl);
+    } catch {
       return reply.send({ cached: false });
     }
     const since = new Date(Date.now() - CACHE_CHECK_HOURS * 60 * 60 * 1000);
