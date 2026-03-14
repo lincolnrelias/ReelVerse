@@ -1,8 +1,9 @@
 import { z } from 'zod';
 
 // YouTube Short URL validation (reuse in API)
+// YouTube URL validation (shorts, watch, mobile, etc.)
 export const youtubeShortRegex =
-  /^https?:\/\/(www\.)?(youtube\.com\/shorts\/|youtu\.be\/)[a-zA-Z0-9_-]{11}(\?.*)?$/;
+  /^(?:https?:\/\/)?(?:(?:www|m)\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?$/;
 
 export const createAnalysisSchema = z.object({
   videoUrl: z
