@@ -16,9 +16,9 @@ function extractHashtags(description: string): string[] {
 }
 
 function extractVideoId(url: string): string | null {
-  const ytRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})|youtube\.com\/shorts\/([^"&?\/\s]{11})/;
+  const ytRegex = /(?:https?:\/\/)?(?:(?:www|m)\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)([^"&?\/\s]{11})/;
   const match = url.match(ytRegex);
-  return match ? (match[1] || match[2]) : null;
+  return match ? match[1] : null;
 }
 
 export async function extractVideo(
