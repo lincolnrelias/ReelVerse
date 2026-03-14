@@ -1,15 +1,24 @@
 import { z } from 'zod';
+import { normalizeYoutubeShortUrl } from './url.js';
 
 // YouTube Short URL validation (reuse in API)
 // YouTube URL validation (shorts, watch, mobile, etc.)
 export const youtubeShortRegex =
   /^(?:https?:\/\/)?(?:(?:www|m)\.)?(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=|shorts\/)|youtu\.be\/)[a-zA-Z0-9_-]{11}(?:\S+)?$/;
 
+/** Garante protocolo para que .url() aceite (ex.: m.youtube.com colado do mobile). */
+function ensureProtocol(s: string): string {
+  const t = s.trim();
+  return /^https?:\/\//i.test(t) ? t : 'https://' + t;
+}
+
 export const createAnalysisSchema = z.object({
   videoUrl: z
     .string()
-    .url()
-    .regex(youtubeShortRegex, 'URL deve ser um YouTube Short válido'),
+    .min(1, 'URL é obrigatória')
+    .transform(ensureProtocol)
+    .pipe(z.string().url().regex(youtubeShortRegex, 'URL deve ser um YouTube Short válido'))
+    .transform(normalizeYoutubeShortUrl),
   language: z.enum(['en', 'pt']).default('en').optional(),
 });
 

@@ -46,8 +46,7 @@ export async function analysisRoutes(
         message: 'URL deve ser um YouTube Short válido (youtube.com/shorts/... ou youtu.be/...)',
       });
     }
-    const { videoUrl: rawUrl, language } = parsed.data;
-    const videoUrl = normalizeYoutubeShortUrl(rawUrl);
+    const { videoUrl, language } = parsed.data;
 
     const [row] = await db
       .insert(analyses)
